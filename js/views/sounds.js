@@ -64,13 +64,15 @@
           '<span class="ipa">' + esc(s) + '</span><span class="row-sub">' + esc(D.by[s].short) + '</span></button>';
       }).join('') + '</div>';
     };
-    // Second row: non-pulmonic consonants, other symbols and the vowel chart side by side.
-    h += '<div class="three-up"><section class="card np-card"><h2 class="sec-title">' + secIcon('cons', 'ʘ') + 'Non-pulmonic consonants</h2><div class="np">' +
+    // Second row: the vowel chart on the left, filling the row's height; non-pulmonic consonants and
+    // other symbols stacked on the right, so no box is left with empty space.
+    h += '<div class="three-up">' + vowelChart() + '<div class="side-col">' +
+      '<section class="card np-card"><h2 class="sec-title">' + secIcon('cons', 'ʘ') + 'Non-pulmonic consonants</h2><div class="np">' +
       listGroup('Clicks', D.clicks) + listGroup('Voiced implosives', D.implosives) + listGroup('Ejectives', D.ejectives) +
       '</div></section><section class="card other-card"><h2 class="sec-title">' + secIcon('cons', 'w') + 'Other symbols</h2><div class="tiles">' +
       D.others.map(function (s) { return symBtn(s, 'tile-btn'); }).join('') +
       '</div><h3 class="sub-h">Affricates and double articulations</h3><p class="hint">Two symbols joined by a tie bar.</p><div class="tiles">' +
-      D.affricates.map(function (s) { return symBtn(s, 'tile-btn wide'); }).join('') + '</div></section>' + vowelChart() + '</div>';
+      D.affricates.map(function (s) { return symBtn(s, 'tile-btn wide'); }).join('') + '</div></section></div></div>';
     return h;
   }
 

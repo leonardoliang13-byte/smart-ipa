@@ -235,23 +235,29 @@ p { margin: 0; }
 #menu .two-up { gap: 20px; }
 
 /* Second row of the chart: non-pulmonic consonants, other symbols and vowels side by side; wraps on narrow screens. */
-.three-up { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
-.three-up > .card { min-width: 0; }
-.three-up > .np-card { flex: 1 1 220px; }
-.three-up > .other-card { flex: 1 1 170px; }
-.three-up > .vowel-card { flex: 2 1 360px; }
-.np-card .np { gap: 4px 8px; }
-.np-card .np-group { flex: 1 1 90px; }
+.three-up { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+.three-up > .card, .side-col > .card { min-width: 0; }
+.side-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.side-col > .other-card { flex: 1; }
+@media (max-width: 1100px) { .three-up { grid-template-columns: minmax(0, 1fr); } }
+.np-card .np { gap: 4px 8px; flex-wrap: nowrap; }
+.np-card .np-group { flex: 1 1 0; }
+.np-card .row-btn { min-height: 38px; gap: 6px; padding: 0 6px; }
+.np-card .row-btn .ipa { width: 22px; font-size: 19px; }
+.np-card .row-sub { font-size: 11.5px; line-height: 1.2; }
+.other-card .tile-btn { width: 40px; height: 40px; font-size: 19px; }
+.other-card .tile-btn.wide { width: 50px; font-size: 18px; }
 
-/* Compact vowel chart for the shared row. */
-.vowel-card .scroll-x { overflow-y: hidden; }
-.vowel-card .vowel-chart { min-width: 300px; max-width: 500px; margin: 0 auto; padding: 0 40px 26px 0; gap: 4px; }
-.vowel-card .v-heights { width: 66px; height: 250px; margin-top: 32px; }
+/* Vowel chart that fills its box: it stretches to the row's height and keeps the trapezoid's proportions sensible. */
+.vowel-card { display: flex; flex-direction: column; }
+.vowel-card .scroll-x { flex: 1; display: flex; overflow-y: hidden; }
+.vowel-card .vowel-chart { flex: 1; min-width: 320px; min-height: 300px; max-width: 560px; margin: 0 auto; padding: 0 40px 26px 0; gap: 4px; display: flex; }
+.vowel-card .v-heights { width: 66px; height: auto; margin-top: 32px; align-self: stretch; }
 .vowel-card .v-heights span, .vowel-card .v-backs span { font-size: 11px; }
-.vowel-card .v-main { padding-left: 26px; }
-.vowel-card .v-backs { height: 18px; margin-bottom: 14px; }
-.vowel-card .v-area { height: 250px; }
-.vowel-card .v-btn { width: 30px; height: 36px; font-size: 19px; border-radius: 8px; }
+.vowel-card .v-main { padding-left: 46px; display: flex; flex-direction: column; }
+.vowel-card .v-backs { flex: none; height: 18px; margin-bottom: 14px; }
+.vowel-card .v-area { flex: 1; height: auto; min-height: 250px; }
+.vowel-card .v-btn { width: 32px; height: 38px; font-size: 20px; border-radius: 8px; }
 .vowel-card .v-node { padding: 0 2px; gap: 1px; }
 
 /* Box headers: a full-width header band, set apart from the box body, that the title sits on. */
