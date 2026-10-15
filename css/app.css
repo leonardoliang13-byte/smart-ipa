@@ -50,7 +50,8 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* Always reserve room for scrollbars, so the layout never shifts when one appears. */
+html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); min-height: 100vh; display: flex; flex-direction: column; }
 a { color: var(--link); }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -90,7 +91,7 @@ p { margin: 0; }
 .pane-detail { flex: 2 1 380px; min-width: 0; align-self: stretch; padding: 28px 28px 36px; background: var(--card); border-left: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 22px; }
 @media (min-width: 900px) {
-  .pane-detail { position: sticky; top: var(--topbar); align-self: flex-start; max-height: calc(100vh - var(--topbar)); overflow-y: auto; }
+  .pane-detail { position: sticky; top: var(--topbar); align-self: flex-start; max-height: calc(100vh - var(--topbar)); overflow-y: auto; scrollbar-gutter: stable; }
 }
 @media (max-width: 899px) {
   .pane-detail { border-left: 0; border-top: 1px solid var(--line); }

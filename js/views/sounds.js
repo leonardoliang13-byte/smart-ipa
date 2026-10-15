@@ -256,8 +256,6 @@
         (p ? '<button type="button" class="chip" data-remove-pro aria-label="Remove ' + esc(p.name) + '"><span class="ipa">' + esc(p.sym) + '</span>' + esc(p.name) + S.icons.close + '</button>' : '') +
         '<button type="button" class="chip chip-clear" data-clear>Clear flavour</button></div>' +
         (c.active.length ? '<p class="hint">The recording is of plain [' + esc(o.s) + ']. Modified versions are not recorded.</p>' : '') + '</div>';
-    } else {
-      h += '<p class="hint tip">Open Diacritics or Prosody below the chart to add flavour and see how marks change this sound.</p>';
     }
 
     h += '<div class="features">' + o.features.map(function (f) {
@@ -334,8 +332,7 @@
     mount: function (root) {
       el = root;
       el.innerHTML = '<div class="split"><section class="pane-main" aria-label="Sounds and marks">' +
-        '<div class="toolbar"><div class="toolbar-title"><h1 class="page-title">IPA chart</h1>' +
-        '<span class="hint">Pick a sound, then open Diacritics or Prosody below to add flavour.</span></div>' +
+        '<div class="toolbar"><div class="toolbar-title"><h1 class="page-title">IPA chart</h1></div>' +
         '<div class="segmented chart-switch" role="group" aria-label="Chart">' +
         '<button type="button" data-chart="cons">' + secIcon('cons', 'p', true) + 'Consonants</button>' +
         '<button type="button" data-chart="vow">' + secIcon('vow', 'a', true) + 'Vowels</button></div>' +
