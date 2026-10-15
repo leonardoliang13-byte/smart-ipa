@@ -8,6 +8,28 @@
 
   S.englishToIPA = window.SmartIPA.englishToIPA;
 
+  // Load Charis SIL with exactly the characters the app shows. Google Fonts otherwise splits the font
+  // into Unicode-range pieces, and combining marks such as the tie bar (U+0361) can land in a piece the
+  // browser never loads, so "t͡s" shows a box. A single subset keeps every mark in the same font file.
+  (function loadIpaFont() {
+    var chars = {};
+    var add = function (s) { Array.from(String(s || '')).forEach(function (c) { chars[c] = true; }); };
+    for (var i = 32; i < 127; i++) add(String.fromCharCode(i));
+    add('ˈˌːˑ‿‖|ꜜꜛ↗↘˥˦˧˨˩◌ɚɝɫ’“”–—…·');
+    S.sounds.all.forEach(function (o) { add(o.s); if (o.ex) add(o.ex.ipa); });
+    S.diacritics.list.forEach(function (x) { add(x.glyph); add(x.exIpa); });
+    S.diacritics.bases.forEach(function (b) { add(b.s); });
+    S.prosody.items.forEach(function (x) {
+      add(x.sym); add(x.alt);
+      x.parts.forEach(function (p) { add(p[0]); });
+      x.segs.forEach(function (g) { add(g.l); });
+    });
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Charis+SIL:wght@400;700&display=swap&text=' + encodeURIComponent(Object.keys(chars).join(''));
+    document.head.appendChild(link);
+  })();
+
   // Shows "Playing" on a button while a playback promise runs, and a message if it fails.
   S.withPlaying = function (btn, promise) {
     var label = btn.querySelector('span');

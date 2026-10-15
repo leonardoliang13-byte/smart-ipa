@@ -90,6 +90,18 @@ p { margin: 0; }
 .pane-main { flex: 3 1 620px; min-width: 0; padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
 .pane-detail { flex: 2 1 380px; min-width: 0; align-self: stretch; padding: 28px 28px 36px; background: var(--card); border-left: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 22px; }
+/* Keep proportions on very wide screens: cap the content width and give the lesson panel a steady width. */
+.split { width: 100%; max-width: 1560px; margin: 0 auto; }
+@media (min-width: 1600px) {
+  .topbar, .footer { padding-left: calc((100% - 1560px) / 2 + 24px); padding-right: calc((100% - 1560px) / 2 + 24px); }
+}
+@media (min-width: 900px) {
+  .pane-main { flex: 1 1 0; }
+  .pane-detail { flex: 0 0 clamp(380px, 31vw, 480px); }
+}
+@media (min-width: 1600px) {
+  .pane-detail { border-right: 1px solid var(--line); }
+}
 @media (min-width: 900px) {
   .pane-detail { position: sticky; top: var(--topbar); align-self: flex-start; max-height: calc(100vh - var(--topbar)); overflow-y: auto; scrollbar-gutter: stable; }
 }
@@ -233,8 +245,8 @@ p { margin: 0; }
 
 /* Compact vowel chart for the shared row. */
 .vowel-card .scroll-x { overflow-y: hidden; }
-.vowel-card .vowel-chart { min-width: 300px; padding: 0 40px 26px 0; gap: 4px; }
-.vowel-card .v-heights { width: 54px; height: 250px; margin-top: 32px; }
+.vowel-card .vowel-chart { min-width: 300px; max-width: 500px; margin: 0 auto; padding: 0 40px 26px 0; gap: 4px; }
+.vowel-card .v-heights { width: 66px; height: 250px; margin-top: 32px; }
 .vowel-card .v-heights span, .vowel-card .v-backs span { font-size: 11px; }
 .vowel-card .v-main { padding-left: 26px; }
 .vowel-card .v-backs { height: 18px; margin-bottom: 14px; }
