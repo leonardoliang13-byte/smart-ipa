@@ -1,5 +1,13 @@
 /*
- * SmartIPA: English text to IPA, broad (phonemic) transcription, General American.
+ * SmartIPA: English text to IPA, General American, following the class conventions in
+ * "IPA for English" (rev. 2025-01-08):
+ *   - diphthongs /aj/ (buy), /ɔj/ (boy), /aw/ (how), /ej/ (date), /ow/ (hope)
+ *   - /ɑ/ for the vowel in "dog"; /ɔ/ only before r, as in "four"
+ *   - /ɹ/ for English r, never /r/
+ *   - /ə/, /ɚ/ in unstressed syllables; /ʌ/, /ɝ/ in stressed ones
+ *   - optional phonetic detail (opts.phonetic): aspirated pʰ tʰ kʰ at the start of a stressed or
+ *     word-initial syllable (not after s, as in "spin"), and the flap ɾ for t/d between a vowel
+ *     (or r) and an unstressed vowel, as in "butter"
  *
  * Lookup order for each word:
  *   1. dictionary  - CMU Pronouncing Dictionary (data/cmudict.js)
@@ -8,15 +16,17 @@
  *   4. guess       - spelling-to-sound rules; unreliable, always flagged
  *
  * Usage:
- *   SmartIPA.transcribe('Hello world')            -> '/həˈloʊ wɝld/'
+ *   SmartIPA.transcribe('Hello world')            -> '/həˈlow wɝld/'
+ *   SmartIPA.transcribe('potato', { phonetic: true }) -> '/pʰəˈtʰejɾow/'
  *   SmartIPA.englishToIPA('Hello world').tokens   -> per-word detail with source and alternatives
  */
 (function (root) {
   'use strict';
 
+  // AO is handled separately: /ɔ/ before r, otherwise /ɑ/ (class convention: "dog" is /dɑɡ/).
   var VOWELS = {
-    AA: 'ɑ', AE: 'æ', AO: 'ɔ', AW: 'aʊ', AY: 'aɪ', EH: 'ɛ', EY: 'eɪ', IH: 'ɪ', IY: 'i',
-    OW: 'oʊ', OY: 'ɔɪ', UH: 'ʊ', UW: 'u'
+    AA: 'ɑ', AE: 'æ', AW: 'aw', AY: 'aj', EH: 'ɛ', EY: 'ej', IH: 'ɪ', IY: 'i',
+    OW: 'ow', OY: 'ɔj', UH: 'ʊ', UW: 'u'
   };
   var CONSONANTS = {
     B: 'b', CH: 'tʃ', D: 'd', DH: 'ð', F: 'f', G: 'ɡ', HH: 'h', JH: 'dʒ', K: 'k', L: 'l', M: 'm',
@@ -27,9 +37,9 @@
     'S P|S T|S K|S M|S N|S L|S W|S F|HH Y|M Y|V Y|S P L|S P R|S P Y|S T R|S K R|S K W|S K Y')
     .split('|').forEach(function (c) { ONSETS[c] = true; });
   var LETTERS = {
-    a: 'eɪ', b: 'bi', c: 'si', d: 'di', e: 'i', f: 'ɛf', g: 'dʒi', h: 'eɪtʃ', i: 'aɪ', j: 'dʒeɪ', k: 'keɪ',
-    l: 'ɛl', m: 'ɛm', n: 'ɛn', o: 'oʊ', p: 'pi', q: 'kju', r: 'ɑɹ', s: 'ɛs', t: 'ti', u: 'ju', v: 'vi',
-    w: 'dʌbəlju', x: 'ɛks', y: 'waɪ', z: 'zi'
+    a: 'ej', b: 'bi', c: 'si', d: 'di', e: 'i', f: 'ɛf', g: 'dʒi', h: 'ejtʃ', i: 'aj', j: 'dʒej', k: 'kej',
+    l: 'ɛl', m: 'ɛm', n: 'ɛn', o: 'ow', p: 'pi', q: 'kju', r: 'ɑɹ', s: 'ɛs', t: 'ti', u: 'ju', v: 'vi',
+    w: 'dʌbəlju', x: 'ɛks', y: 'waj', z: 'zi'
   };
 
   var dict = null;
@@ -63,44 +73,71 @@
 
   // ARPABET string -> IPA, placing stress marks before the onset of the stressed syllable.
   function arpabetToIPA(pron, opts) {
-    var ph = pron.split(' ');
-    var parts = [], stress = [], isVowel = [], count = 0;
-    for (var i = 0; i < ph.length; i++) {
-      var m = /^([A-Z]+)([012])?$/.exec(ph[i]);
-      if (!m) continue;
-      var base = m[1], s = m[2];
-      if (s !== undefined) {
-        count++;
-        var ipa = base === 'AH' ? (s === '0' ? 'ə' : 'ʌ')
-          : base === 'ER' ? (s === '0' ? 'ɚ' : 'ɝ')
-          : VOWELS[base];
-        parts.push(ipa); stress.push(s); isVowel.push(true);
-      } else {
-        parts.push(CONSONANTS[base] || ''); stress.push(null); isVowel.push(false);
+    var ph = pron.split(' ').filter(function (p) { return /^[A-Z]+[012]?$/.test(p); });
+    var names = ph.map(function (p) { return p.replace(/[012]$/, ''); });
+    var stress = ph.map(function (p) { var m = /[012]$/.exec(p); return m ? m[0] : null; });
+    var isVowel = stress.map(function (s) { return s !== null; });
+    var count = isVowel.filter(Boolean).length;
+
+    // Where each syllable's onset starts: between two vowels, the longest legal English onset.
+    var onsetOf = {};
+    for (var v = 0; v < ph.length; v++) {
+      if (!isVowel[v]) continue;
+      var start = v;
+      while (start > 0 && !isVowel[start - 1]) start--;
+      var onset = start;
+      if (start > 0) {
+        onset = v;
+        for (var k = Math.min(3, v - start); k >= 1; k--) {
+          var cluster = names.slice(v - k, v).join(' ');
+          if (k === 1 ? cluster !== 'NG' : ONSETS[cluster]) { onset = v - k; break; }
+        }
       }
+      onsetOf[v] = onset;
     }
+    // The vowel whose syllable a consonant at index i begins (if i is the first consonant of an onset).
+    var syllableStartingAt = function (i) {
+      for (var nv = i + 1; nv < ph.length; nv++) if (isVowel[nv]) return onsetOf[nv] === i ? nv : -1;
+      return -1;
+    };
+
+    var noMark = {}; // syllables whose stress mark is dropped because they begin with a flap
+    var parts = names.map(function (n, i) {
+      if (isVowel[i]) {
+        var s = stress[i];
+        if (n === 'AH') return s === '0' ? 'ə' : 'ʌ';
+        if (n === 'ER') return s === '0' ? 'ɚ' : 'ɝ';
+        if (n === 'AO') return names[i + 1] === 'R' ? 'ɔ' : 'ɑ';
+        return VOWELS[n] || '';
+      }
+      var c = CONSONANTS[n] || '';
+      if (opts.phonetic) {
+        // Flap: t or d after a vowel (or r) and before a vowel without primary stress, as in "butter",
+        // "water", "party", "potato". CMUdict sometimes gives such final syllables secondary stress; a flap
+        // cannot begin a stressed syllable, so that syllable's stress mark is dropped.
+        if ((n === 'T' || n === 'D') && i > 0 && (isVowel[i - 1] || names[i - 1] === 'R') && isVowel[i + 1] && stress[i + 1] !== '1') {
+          noMark[i + 1] = true;
+          return 'ɾ';
+        }
+        // Aspiration: p, t, k beginning a stressed or word-initial syllable, but not after s ("spin", "stop").
+        if (n === 'P' || n === 'T' || n === 'K') {
+          var sv = syllableStartingAt(i);
+          if (sv >= 0 && (stress[sv] !== '0' || i === 0)) c += 'ʰ';
+        }
+      }
+      return c;
+    });
+
     var marks = {};
     if (opts.stress && (count > 1 || opts.stressMonosyllables)) {
-      var names = ph.map(function (p) { return p.replace(/[012]$/, ''); });
-      for (var v = 0; v < parts.length; v++) {
-        if (!isVowel[v] || stress[v] === '0') continue;
-        var start = v;
-        while (start > 0 && !isVowel[start - 1]) start--;
-        var onset = start;
-        if (start > 0) {
-          // Between two vowels: give the stressed syllable the longest legal onset.
-          onset = v;
-          for (var k = Math.min(3, v - start); k >= 1; k--) {
-            var cluster = names.slice(v - k, v).join(' ');
-            if (k === 1 ? cluster !== 'NG' : ONSETS[cluster]) { onset = v - k; break; }
-          }
-        }
-        marks[onset] = stress[v] === '1' ? 'ˈ' : 'ˌ';
-      }
+      Object.keys(onsetOf).forEach(function (key) {
+        var vi = +key;
+        if (stress[vi] !== '0' && !noMark[vi]) marks[onsetOf[vi]] = stress[vi] === '1' ? 'ˈ' : 'ˌ';
+      });
     }
     var out = '';
     for (var j = 0; j < parts.length; j++) out += (marks[j] || '') + parts[j];
-    return opts.r === 'r' ? out.replace(/ɹ/g, 'r') : out;
+    return out;
   }
 
   function lastPhone(pron) { return pron.slice(pron.lastIndexOf(' ') + 1).replace(/[012]$/, ''); }
@@ -140,15 +177,15 @@
 
   // Spelling-to-sound fallback for words the dictionary cannot resolve. Output is IPA, without stress.
   var DIGRAPHS = [
-    ['tion', 'ʃən'], ['sion', 'ʒən'], ['ough', 'oʊ'], ['augh', 'ɔ'], ['eigh', 'eɪ'], ['igh', 'aɪ'], ['tch', 'tʃ'],
+    ['tion', 'ʃən'], ['sion', 'ʒən'], ['ough', 'ow'], ['augh', 'ɑ'], ['eigh', 'ej'], ['igh', 'aj'], ['tch', 'tʃ'],
     ['dge', 'dʒ'], ['sch', 'sk'], ['ch', 'tʃ'], ['sh', 'ʃ'], ['th', 'θ'], ['ph', 'f'], ['wh', 'w'], ['ck', 'k'],
-    ['ng', 'ŋ'], ['qu', 'kw'], ['gh', ''], ['ee', 'i'], ['ea', 'i'], ['oo', 'u'], ['ou', 'aʊ'], ['ow', 'oʊ'],
-    ['oi', 'ɔɪ'], ['oy', 'ɔɪ'], ['ai', 'eɪ'], ['ay', 'eɪ'], ['au', 'ɔ'], ['aw', 'ɔ'], ['oa', 'oʊ'], ['ie', 'i'],
-    ['ei', 'eɪ'], ['ey', 'i'], ['ew', 'u'], ['ue', 'u'], ['ui', 'u']
+    ['ng', 'ŋ'], ['qu', 'kw'], ['gh', ''], ['ee', 'i'], ['ea', 'i'], ['oo', 'u'], ['ou', 'aw'], ['ow', 'ow'],
+    ['oi', 'ɔj'], ['oy', 'ɔj'], ['ai', 'ej'], ['ay', 'ej'], ['au', 'ɑ'], ['aw', 'ɑ'], ['oa', 'ow'], ['ie', 'i'],
+    ['ei', 'ej'], ['ey', 'i'], ['ew', 'u'], ['ue', 'u'], ['ui', 'u']
   ];
   var R_VOWELS = [['ar', 'ɑɹ'], ['er', 'ɚ'], ['ir', 'ɝ'], ['ur', 'ɝ'], ['or', 'ɔɹ']];
   var SHORT = { a: 'æ', e: 'ɛ', i: 'ɪ', o: 'ɑ', u: 'ʌ' };
-  var LONG = { a: 'eɪ', e: 'i', i: 'aɪ', o: 'oʊ', u: 'u' };
+  var LONG = { a: 'ej', e: 'i', i: 'aj', o: 'ow', u: 'u' };
   var PLAIN = { b: 'b', d: 'd', f: 'f', h: 'h', j: 'dʒ', k: 'k', l: 'l', m: 'm', n: 'n', p: 'p', q: 'k', r: 'ɹ', t: 't', v: 'v', w: 'w', z: 'z' };
 
   function guess(word) {
@@ -170,7 +207,7 @@
         if (c === 'e' && i === w.length - 1 && /[aeiouy]/.test(w.slice(0, i))) { i++; continue; }
         out += magicE ? LONG[c] : SHORT[c];
       } else if (c === 'y') {
-        out += i === 0 ? 'j' : i === w.length - 1 ? (w.length > 3 ? 'i' : 'aɪ') : 'ɪ';
+        out += i === 0 ? 'j' : i === w.length - 1 ? (w.length > 3 ? 'i' : 'aj') : 'ɪ';
       } else if (c === 'c') {
         out += /[eiy]/.test(next || '') ? 's' : 'k';
       } else if (c === 'g') {
@@ -219,7 +256,7 @@
   function settings(opts) {
     opts = opts || {};
     return {
-      r: opts.r === 'r' ? 'r' : 'ɹ',
+      phonetic: !!opts.phonetic,
       stress: opts.stress !== false,
       stressMonosyllables: !!opts.stressMonosyllables,
       slashes: opts.slashes !== false
@@ -238,11 +275,10 @@
         .filter(function (x, i, arr) { return arr.indexOf(x) === i; });
       return { ipa: all[0], source: source, alternatives: all.slice(1) };
     }
-    var fix = function (s) { return o.r === 'r' ? s.replace(/ɹ/g, 'r') : s; };
     if (/^[A-Z]{2,6}$/.test(text)) {
-      return { ipa: fix(text.toLowerCase().split('').map(function (c) { return LETTERS[c]; }).join(' ')), source: 'spelled', alternatives: [] };
+      return { ipa: text.toLowerCase().split('').map(function (c) { return LETTERS[c]; }).join(' '), source: 'spelled', alternatives: [] };
     }
-    return { ipa: fix(guess(word)), source: 'guess', alternatives: [] };
+    return { ipa: guess(word), source: 'guess', alternatives: [] };
   }
 
   // Full text -> { ipa, tokens }. Punctuation and spacing are kept as written.

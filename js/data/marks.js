@@ -20,7 +20,7 @@
   });
 
   // id|mark|name|group|applies to (C consonant, V vowel, B both)|effect|example language|word|IPA
-  var RAW = 'vl|̥|Voiceless|A|B|The vocal folds stay apart on a sound that is normally voiced.|English|play|pl̥eɪ\n' +
+  var RAW = 'vl|̥|Voiceless|A|B|The vocal folds stay apart on a sound that is normally voiced.|English|play|pl̥ej\n' +
     'vd|̬|Voiced|A|C|Adds vocal fold vibration to a sound that is normally voiceless.|Spanish|mismo|ˈmis̬mo\n' +
     'br|̤|Breathy voiced|A|B|The vocal folds vibrate while staying slightly apart, giving a murmured quality.|Gujarati|બાર bār|ba̤r\n' +
     'cr|̰|Creaky voiced|A|B|The vocal folds vibrate slowly and irregularly, giving a creaky quality.|Hausa|ƴaƴa|j̰aj̰a\n' +
@@ -85,11 +85,11 @@
     cats: { A: 'Suprasegmental', B: 'Suprasegmental', C: 'Level tone', D: 'Contour tone', E: 'Tone and intonation' },
     items: [
       { id: 'ps', sym: 'ˈ', name: 'Primary stress', grp: 'A', desc: 'Goes before the syllable that carries the main stress of a word. That syllable is usually louder, longer and higher in pitch.',
-        parts: [['ˌfoʊnə', 0], ['ˈ', 1], ['tɪʃən', 0]], ex: ['English', 'phonetician', ''],
-        segs: [Sg('foʊ', 1, [3]), Sg('nə', 0.7, [2]), Sg('tɪ', 1.1, [4.6, 4], 1), Sg('ʃən', 0.9, [2, 1.5])] },
+        parts: [['ˌfownə', 0], ['ˈ', 1], ['tɪʃən', 0]], ex: ['English', 'phonetician', ''],
+        segs: [Sg('fow', 1, [3]), Sg('nə', 0.7, [2]), Sg('tɪ', 1.1, [4.6, 4], 1), Sg('ʃən', 0.9, [2, 1.5])] },
       { id: 'ss', sym: 'ˌ', name: 'Secondary stress', grp: 'A', desc: 'Goes before a syllable that is stressed, but less strongly than the main one. Long words often have both.',
-        parts: [['ˌ', 1], ['foʊnəˈtɪʃən', 0]], ex: ['English', 'phonetician', ''],
-        segs: [Sg('foʊ', 1, [3], 1), Sg('nə', 0.7, [2]), Sg('tɪ', 1.1, [4.6, 4]), Sg('ʃən', 0.9, [2, 1.5])] },
+        parts: [['ˌ', 1], ['fownəˈtɪʃən', 0]], ex: ['English', 'phonetician', ''],
+        segs: [Sg('fow', 1, [3], 1), Sg('nə', 0.7, [2]), Sg('tɪ', 1.1, [4.6, 4]), Sg('ʃən', 0.9, [2, 1.5])] },
       { id: 'lg', sym: 'ː', name: 'Long', grp: 'A', desc: 'Follows a sound that is held for roughly twice its usual duration. In many languages length alone changes the word.',
         parts: [['oba', 0], ['ː', 1], ['saɴ', 0]], ex: ['Japanese', 'おばあさん obāsan', 'grandmother (short: obasan, aunt)'],
         segs: [Sg('a', 1, [3], 0, 0.5), Sg('aː', 2, [3], 1)] },
@@ -103,11 +103,11 @@
         parts: [['ɹi', 0], ['.', 1], ['ækt', 0]], ex: ['English', 'react', ''],
         segs: [Sg('ɹi', 1, [3], 0, 0.12), Sg('ækt', 1.2, [4, 2.5])] },
       { id: 'mn', sym: '|', name: 'Minor (foot) group', grp: 'B', desc: 'Marks a small rhythmic boundary inside an utterance, often heard as a brief pause.',
-        parts: [['ɪn ði ɛnd ', 0], ['|', 1], [' wi steɪd', 0]], ex: ['English', 'In the end, we stayed', ''],
-        segs: [Sg('ɪn ði ɛnd', 1.8, [3, 3.6], 0, 0.4), Sg('wi steɪd', 1.6, [3.6, 1.5])] },
+        parts: [['ɪn ði ɛnd ', 0], ['|', 1], [' wi stejd', 0]], ex: ['English', 'In the end, we stayed', ''],
+        segs: [Sg('ɪn ði ɛnd', 1.8, [3, 3.6], 0, 0.4), Sg('wi stejd', 1.6, [3.6, 1.5])] },
       { id: 'mj', sym: '‖', name: 'Major (intonation) group', grp: 'B', desc: 'Marks the end of a complete intonation phrase, usually with a clear pause and a pitch reset.',
-        parts: [['wi steɪd ', 0], ['‖', 1], [' ðeɪ lɛft', 0]], ex: ['English', 'We stayed. They left.', ''],
-        segs: [Sg('wi steɪd', 1.6, [3.8, 1.5], 0, 0.9), Sg('ðeɪ lɛft', 1.6, [3.8, 1.5])] },
+        parts: [['wi stejd ', 0], ['‖', 1], [' ðej lɛft', 0]], ex: ['English', 'We stayed. They left.', ''],
+        segs: [Sg('wi stejd', 1.6, [3.8, 1.5], 0, 0.9), Sg('ðej lɛft', 1.6, [3.8, 1.5])] },
       { id: 'lk', sym: '‿', name: 'Linking', grp: 'B', desc: 'Shows that two words run together with no break between them.',
         parts: [['lez', 0], ['‿', 1], ['ami', 0]], ex: ['French', 'les amis', 'the friends'],
         segs: [Sg('le', 1, [3]), Sg('za', 1, [3], 1), Sg('mi', 1, [3, 2.2])] },

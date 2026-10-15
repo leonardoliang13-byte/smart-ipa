@@ -3,7 +3,7 @@
 A web app for learning the International Phonetic Alphabet.
 
 - **Sounds**: one page on the left showing the consonant and vowel charts, with folded Diacritics and Prosody sections underneath that open with a click, and a lesson panel on the right. Pick a sound, then add diacritics and a prosody mark as "flavour". The panel shows the composed symbol and its name, the recording, a vocal-tract diagram with the place of articulation circled, what each mark does, a playable pitch-and-timing graph for prosody, an example word and similar sounds. The URL records the whole combination, e.g. `#/sounds/a?d=nas&p=tf` is a nasalized [a] with a falling tone.
-- **Transcribe**: type English and get a broad IPA transcription (General American). Every symbol in the result links to its sound.
+- **Transcribe**: type English and get an IPA transcription (General American) in the class conventions of "IPA for English" (rev. 2025-01-08): /aj/ buy, /ɔj/ boy, /aw/ how, /ej/ date, /ow/ hope, /ɑ/ dog, /ɔ/ only before r, /ɹ/ for r, /ə ɚ/ unstressed and /ʌ ɝ/ stressed. An option adds aspiration (pʰ tʰ kʰ) and flaps (ɾ). Every symbol in the result links to its sound.
 
 It is a plain static site: HTML, CSS and JavaScript with no build step and no server code.
 

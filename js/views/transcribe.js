@@ -1,12 +1,15 @@
-/* Transcribe: English text to broad IPA (General American). Each symbol in the result links to its sound. */
+/* Transcribe: English text to IPA (General American, class conventions). Each symbol in the result links to its sound. */
 (function (S) {
   'use strict';
   var esc = S.esc;
   var el, loading = null, timer = null;
-  var KEY = 'smartipa.transcribe';
-  var opts = { r: 'ɹ', stress: true };
+  var KEY = 'smartipa.transcribe.v2';
+  var opts = { stress: true, phonetic: false };
   var text = 'The quick brown fox jumps over the lazy dog.';
-  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved) { text = saved.text; opts = saved.opts; } } catch (e) {}
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved) { text = saved.text; opts = { stress: saved.opts.stress !== false, phonetic: !!saved.opts.phonetic }; }
+  } catch (e) {}
 
   // The dictionary is about 3.6 MB, so it loads only when this tab is first opened.
   function loadDictionary() {
@@ -33,7 +36,10 @@
       else if (c === 'ˌ') out.push({ t: c, href: 'prosody/ss', title: 'Secondary stress' });
       else if (c === 'ɚ') out.push({ t: c, href: 'sounds/ə', title: 'R-coloured schwa (ə with r-colouring)' });
       else if (c === 'ɝ') out.push({ t: c, href: 'sounds/ɜ', title: 'R-coloured open-mid central vowel (ɜ with r-colouring)' });
-      else if (c === 'r' && opts.r === 'r') out.push({ t: c, href: 'sounds/ɹ', title: D['ɹ'].name });
+      else if (c === 'ʰ' && out.length && out[out.length - 1].href && /^sounds\/[ptk]$/.test(out[out.length - 1].href)) {
+        var base = out[out.length - 1].href.slice(7);
+        out.push({ t: c, href: 'sounds/' + base + '?d=asp', title: 'Aspirated ' + D[base].name.toLowerCase() });
+      }
       else if (D[c]) out.push({ t: c, href: 'sounds/' + c, title: D[c].name });
       else out.push({ t: c });
     }
@@ -62,11 +68,12 @@
     mount: function (root) {
       el = root;
       el.innerHTML = '<div class="narrow">' +
-        '<div class="page-head"><h1>English to IPA</h1><p class="hint">Broad transcription, General American. Select any symbol in the result to see and hear it.</p></div>' +
+        '<div class="page-head"><h1>English to IPA</h1><p class="hint">General American, using the class conventions: /aj/ buy, /ɔj/ boy, /aw/ how, /ej/ date, /ow/ hope, ' +
+        '/ɑ/ dog, /ɔ/ only before r (four), and /ɹ/ for r. Select any symbol in the result to see and hear it.</p></div>' +
         '<section class="card"><label for="tr-in" class="label">English text</label>' +
         '<textarea id="tr-in" spellcheck="false" rows="3"></textarea>' +
-        '<div class="options"><label>r symbol <select id="tr-r"><option value="ɹ">ɹ (IPA)</option><option value="r">r (dictionary style)</option></select></label>' +
-        '<label class="check"><input type="checkbox" id="tr-stress"> Stress marks</label></div></section>' +
+        '<div class="options"><label class="check"><input type="checkbox" id="tr-stress"> Stress marks</label>' +
+        '<label class="check"><input type="checkbox" id="tr-phonetic"> Aspiration and flaps (pʰ tʰ kʰ, ɾ)</label></div></section>' +
         '<section class="card"><div class="block-head"><h2>Transcription</h2>' +
         '<button type="button" class="btn-icon" id="tr-speak" hidden aria-label="Say the text with this device’s voice">' + S.icons.speaker + '</button></div>' +
         '<div id="tr-out" class="ipa tr-out" aria-live="polite"><span class="empty">Loading the pronunciation dictionary…</span></div></section>' +
@@ -76,14 +83,14 @@
         'number: read as words · guess: spelling rules, often wrong.</p></section></div>';
       var input = el.querySelector('#tr-in');
       input.value = text;
-      el.querySelector('#tr-r').value = opts.r;
       el.querySelector('#tr-stress').checked = opts.stress;
+      el.querySelector('#tr-phonetic').checked = opts.phonetic;
       input.addEventListener('input', function () {
         text = input.value;
         clearTimeout(timer);
         timer = setTimeout(renderResult, 120);
       });
-      el.querySelector('#tr-r').addEventListener('change', function (e) { opts.r = e.target.value; renderResult(); });
+      el.querySelector('#tr-phonetic').addEventListener('change', function (e) { opts.phonetic = e.target.checked; renderResult(); });
       el.querySelector('#tr-stress').addEventListener('change', function (e) { opts.stress = e.target.checked; renderResult(); });
       el.querySelector('#tr-speak').addEventListener('click', function (e) {
         S.withPlaying(e.currentTarget, S.audio.speak(text, 'English (American)'));
