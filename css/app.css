@@ -222,6 +222,26 @@ p { margin: 0; }
 #menu { display: flex; flex-direction: column; gap: 20px; }
 #menu .two-up { gap: 20px; }
 
+/* Second row of the chart: non-pulmonic consonants, other symbols and vowels side by side; wraps on narrow screens. */
+.three-up { display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; }
+.three-up > .card { min-width: 0; }
+.three-up > .np-card { flex: 1 1 220px; }
+.three-up > .other-card { flex: 1 1 170px; }
+.three-up > .vowel-card { flex: 2 1 360px; }
+.np-card .np { gap: 4px 8px; }
+.np-card .np-group { flex: 1 1 90px; }
+
+/* Compact vowel chart for the shared row. */
+.vowel-card .scroll-x { overflow-y: hidden; }
+.vowel-card .vowel-chart { min-width: 300px; padding: 0 40px 26px 0; gap: 4px; }
+.vowel-card .v-heights { width: 54px; height: 250px; margin-top: 32px; }
+.vowel-card .v-heights span, .vowel-card .v-backs span { font-size: 11px; }
+.vowel-card .v-main { padding-left: 26px; }
+.vowel-card .v-backs { height: 18px; margin-bottom: 14px; }
+.vowel-card .v-area { height: 250px; }
+.vowel-card .v-btn { width: 30px; height: 36px; font-size: 19px; border-radius: 8px; }
+.vowel-card .v-node { padding: 0 2px; gap: 1px; }
+
 /* Box headers: a full-width header band, set apart from the box body, that the title sits on. */
 :root { --head: #ECEDF2; }
 @media (prefers-color-scheme: dark) { :root { --head: #2C2C2E; } }

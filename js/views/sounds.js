@@ -5,9 +5,7 @@
 (function (S) {
   'use strict';
   var esc = S.esc, D = S.sounds, DIA = S.diacritics, PRO = S.prosody;
-  var el, sel = 'p', dia = {}, pro = null, lastBase = null, fromMenu = false;
-  var chart = 'cons'; // which chart the switch shows: 'cons' or 'vow'
-  var open = { dia: false, pro: false };
+  var el, sel = 'p', dia = {}, pro = null, lastBase = null, fromMenu = false;  var open = { dia: false, pro: false };
 
   var BEFORE = { ps: 1, ss: 1, ds: 1, us: 1, gr: 1, gf: 1 };
   var BETWEEN = { sb: '.', mn: ' | ', mj: ' ‖ ', lk: '‿' };
@@ -66,18 +64,19 @@
           '<span class="ipa">' + esc(s) + '</span><span class="row-sub">' + esc(D.by[s].short) + '</span></button>';
       }).join('') + '</div>';
     };
-    h += '<div class="two-up"><section class="card"><h2 class="sec-title">' + secIcon('cons', 'ʘ') + 'Non-pulmonic consonants</h2><div class="np">' +
+    // Second row: non-pulmonic consonants, other symbols and the vowel chart side by side.
+    h += '<div class="three-up"><section class="card np-card"><h2 class="sec-title">' + secIcon('cons', 'ʘ') + 'Non-pulmonic consonants</h2><div class="np">' +
       listGroup('Clicks', D.clicks) + listGroup('Voiced implosives', D.implosives) + listGroup('Ejectives', D.ejectives) +
-      '</div></section><section class="card"><h2 class="sec-title">' + secIcon('cons', 'w') + 'Other symbols</h2><div class="tiles">' +
+      '</div></section><section class="card other-card"><h2 class="sec-title">' + secIcon('cons', 'w') + 'Other symbols</h2><div class="tiles">' +
       D.others.map(function (s) { return symBtn(s, 'tile-btn'); }).join('') +
       '</div><h3 class="sub-h">Affricates and double articulations</h3><p class="hint">Two symbols joined by a tie bar.</p><div class="tiles">' +
-      D.affricates.map(function (s) { return symBtn(s, 'tile-btn wide'); }).join('') + '</div></section></div>';
+      D.affricates.map(function (s) { return symBtn(s, 'tile-btn wide'); }).join('') + '</div></section>' + vowelChart() + '</div>';
     return h;
   }
 
   function vowelChart() {
-    return '<section class="card"><div class="card-head"><h2 class="sec-title">' + secIcon('vow', 'a') + 'Vowels</h2><p class="hint">In each pair the right-hand symbol is rounded. ' +
-      'Position on the chart mirrors tongue position in the mouth.</p></div><div class="scroll-x"><div class="vowel-chart">' +
+    return '<section class="card vowel-card"><div class="card-head"><h2 class="sec-title">' + secIcon('vow', 'a') + 'Vowels</h2><p class="hint">Right-hand symbol of each pair is rounded.</p>' +
+      '</div><div class="scroll-x"><div class="vowel-chart">' +
       '<div class="v-heights"><span style="top:0">Close</span><span style="top:33.3%">Close-mid</span><span style="top:66.7%">Open-mid</span><span style="top:100%">Open</span></div>' +
       '<div class="v-main"><div class="v-backs"><span style="left:0">Front</span><span style="left:50%">Central</span><span style="left:100%">Back</span></div>' +
       '<div class="v-area"><svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none">' +
@@ -133,10 +132,7 @@
   }
 
   function renderMenu() {
-    el.querySelectorAll('[data-chart]').forEach(function (b) {
-      b.setAttribute('aria-pressed', b.getAttribute('data-chart') === chart);
-    });
-    el.querySelector('#menu').innerHTML = (chart === 'vow' ? vowelChart() : consonantChart()) + diacriticMenu() + prosodyMenu();
+    el.querySelector('#menu').innerHTML = consonantChart() + diacriticMenu() + prosodyMenu();
   }
 
   // ---------- Composition ----------
@@ -333,9 +329,6 @@
       el = root;
       el.innerHTML = '<div class="split"><section class="pane-main" aria-label="Sounds and marks">' +
         '<div class="toolbar"><div class="toolbar-title"><h1 class="page-title">IPA chart</h1></div>' +
-        '<div class="segmented chart-switch" role="group" aria-label="Chart">' +
-        '<button type="button" data-chart="cons">' + secIcon('cons', 'p', true) + 'Consonants</button>' +
-        '<button type="button" data-chart="vow">' + secIcon('vow', 'a', true) + 'Vowels</button></div>' +
         '<label class="search">' + S.icons.search + '<span class="sr-only">Search sounds</span>' +
         '<input type="search" id="sound-search" placeholder="Symbol or name, e.g. velar nasal" autocomplete="off"></label></div>' +
         '<div id="menu"></div></section><aside class="pane-detail" id="detail" aria-label="Lesson" aria-live="polite"></aside></div>';
@@ -347,8 +340,6 @@
       }, true);
 
       el.addEventListener('click', function (e) {
-        var sw = e.target.closest('[data-chart]');
-        if (sw) { chart = sw.getAttribute('data-chart'); renderMenu(); return; }
         var b = e.target.closest('[data-sym]');
         if (b) {
           var s = b.getAttribute('data-sym');
@@ -406,10 +397,6 @@
       var reveal = q.open === 'dia' || q.open === 'pro' ? q.open : null;
       if (reveal) open[reveal] = true;
       var baseChanged = sel !== lastBase, external = !fromMenu;
-      // When the selected sound changes from outside the chart (a link, search, "Compare with"), show its chart.
-      if (baseChanged && (external || !document.activeElement || !document.activeElement.closest('#menu'))) {
-        chart = D.by[sel].kind === 'vowel' ? 'vow' : 'cons';
-      }
       lastBase = sel;
       fromMenu = false;
 
