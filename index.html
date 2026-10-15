@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartIPA</title>
+<meta name="description" content="Learn the International Phonetic Alphabet: hear every sound, see how it is made, explore diacritics and tones, and transcribe English into IPA.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Charis+SIL:wght@400;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<a class="skip" href="#views">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="#/sounds"><span class="brand-mark ipa" aria-hidden="true">ə</span><span>SmartIPA</span></a>
+  <nav class="segmented nav" aria-label="Sections">
+    <a href="#/sounds" data-nav="sounds">Sounds</a>
+    <a href="#/transcribe" data-nav="transcribe">Transcribe</a>
+  </nav>
+  <div class="topbar-end"></div>
+</header>
+
+<main id="views">
+  <div id="view-sounds" hidden></div>
+  <div id="view-transcribe" hidden></div>
+  <div id="view-credits" hidden></div>
+</main>
+
+<footer class="footer">
+  <span>Recordings from Wikimedia Commons. English pronunciations from the CMU Pronouncing Dictionary.</span>
+  <a href="#/credits" data-nav="credits">Credits and licences</a>
+</footer>
+
+<noscript><p class="noscript">SmartIPA needs JavaScript to run.</p></noscript>
+
+<script src="js/core.js"></script>
+<script src="js/data/sounds.js"></script>
+<script src="js/data/marks.js"></script>
+<script src="js/tract.js"></script>
+<script src="js/audio.js"></script>
+<script src="src/english-to-ipa.js"></script>
+<script src="js/views/sounds.js"></script>
+<script src="js/views/transcribe.js"></script>
+<script src="js/views/credits.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

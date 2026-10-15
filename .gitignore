@@ -1,0 +1,6 @@
+# Local tooling, not part of the site
+.claude/
+
+# Local agent skills, not part of the site
+.agents/
+skills-lock.json

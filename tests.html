@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartIPA tests</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<main class="narrow">
+  <div class="page-head"><h1>SmartIPA tests</h1><p class="hint" id="score">Running…</p></div>
+  <section class="card">
+    <div class="scroll-x">
+      <table class="table">
+        <thead><tr><th>Test</th><th>Expected</th><th>Got</th><th>Result</th></tr></thead>
+        <tbody id="tests"></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Vocal tract gallery</h2>
+    <p class="hint">Every chart sound, for checking the drawings by eye.</p>
+    <div id="gallery" class="gallery"></div>
+  </section>
+</main>
+<style>
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 12px; }
+  .gallery figure { margin: 0; }
+  .gallery figcaption { font-size: 12px; margin-top: 4px; }
+</style>
+<script src="js/core.js"></script>
+<script src="js/data/sounds.js"></script>
+<script src="js/data/marks.js"></script>
+<script src="js/tract.js"></script>
+<script src="data/cmudict.js"></script>
+<script src="src/english-to-ipa.js"></script>
+<script>
+(function () {
+  var T = function (s, o) { return SmartIPA.transcribe(s, o); };
+  var S = window.SIPA;
+  var cases = [
+    ['hello', T('hello'), '/həˈloʊ/'],
+    ['water', T('water'), '/ˈwɔtɚ/'],
+    ['about', T('about'), '/əˈbaʊt/'],
+    ['the cat', T('the cat'), '/ðə kæt/'],
+    ['strength', T('strength'), '/stɹɛŋkθ/'],
+    ['understand', T('understand'), '/ˌʌndɚˈstænd/'],
+    ['international', T('international'), '/ˌɪntɚˈnæʃənəl/'],
+    ['extra', T('extra'), '/ˈɛkstɹə/'],
+    ['bird', T('bird'), '/bɝd/'],
+    ['punctuation kept', T('Thinking, she judged.'), '/ˈθɪŋkɪŋ, ʃi dʒʌdʒd./'],
+    ['possessives and plurals', T("cat's dogs' boxes"), '/kæts dɑɡz ˈbɑksəz/'],
+    ['quotes dropped', T('“Don’t stop,” he said'), '/doʊnt stɑp, hi sɛd/'],
+    ['number', T('42'), '/ˈfɔɹti tu/'],
+    ['heteronym, first listed', T('record'), '/ɹəˈkɔɹd/'],
+    ['guess for unknown word', T('blorfing'), '/blɔɹfɪŋ/'],
+    ['r option', T('red car', { r: 'r' }), '/rɛd kɑr/'],
+    ['no stress, no slashes', T('international', { stress: false, slashes: false }), 'ɪntɚnæʃənəl'],
+    ['121 chart sounds', String(S.sounds.all.length), '121'],
+    ['every sound has a recording', String(S.sounds.all.filter(function (o) { return o.audio; }).length), '121'],
+    ['every sound has an example', String(S.sounds.all.filter(function (o) { return o.ex; }).length), '121'],
+    ['every sound draws a tract', String(S.sounds.all.filter(function (o) { return /^<svg[\s\S]*<\/svg>$/.test(S.tractSVG(S.tractParams(o))) && !/NaN|undefined/.test(S.tractSVG(S.tractParams(o))); }).length), '121'],
+    ['31 diacritics', String(S.diacritics.list.length), '31'],
+    ['24 prosody marks', String(S.prosody.items.length), '24']
+  ];
+  var pass = 0, body = document.getElementById('tests');
+  cases.forEach(function (c) {
+    var ok = c[1] === c[2];
+    if (ok) pass++;
+    var tr = document.createElement('tr');
+    [c[0], c[2], c[1], ok ? 'pass' : 'FAIL'].forEach(function (v, i) {
+      var td = document.createElement('td'); td.textContent = v;
+      if (i === 1 || i === 2) td.className = 'ipa';
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+  document.getElementById('score').textContent = pass + ' of ' + cases.length + ' pass';
+  window.__testSummary = { pass: pass, total: cases.length };
+  document.getElementById('gallery').innerHTML = S.sounds.all.map(function (o) {
+    return '<figure>' + S.tractSVG(S.tractParams(o)) + '<figcaption><span class="ipa">' + S.esc(o.s) + '</span> ' + S.esc(o.name) + '</figcaption></figure>';
+  }).join('');
+})();
+</script>
+</body>
+</html>
