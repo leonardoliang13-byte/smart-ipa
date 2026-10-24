@@ -1,11 +1,11 @@
-/* Learn: one page on the left (consonants, vowels, then folded Diacritics and Prosody sections) and one
-   teaching panel on the right. Pick a sound, then add diacritics and a prosody mark as "flavour";
-   the panel explains the combination.
-   Route: #/sounds/<symbol>?d=<diacritic ids>&p=<prosody id>&open=<dia|pro> */
+/* Sounds: the IPA chart on the left and the lesson on the right. Pick a sound; modify it with diacritics
+   or a prosody mark from the tray inside the lesson, which explains the combination.
+   Route: #/sounds/<symbol>?d=<diacritic ids>&p=<prosody id>&open=<dia|pro> (open picks the tray tab) */
 (function (S) {
   'use strict';
   var esc = S.esc, D = S.sounds, DIA = S.diacritics, PRO = S.prosody;
-  var el, sel = 'p', dia = {}, pro = null, lastBase = null, fromMenu = false;  var open = { dia: false, pro: false };
+  var el, sel = 'p', dia = {}, pro = null, lastBase = null, fromMenu = false;
+  var trayTab = 'dia', trayOpenBlocked = false;
 
   var BEFORE = { ps: 1, ss: 1, ds: 1, us: 1, gr: 1, gf: 1 };
   var BETWEEN = { sb: '.', mn: ' | ', mj: ' ‖ ', lk: '‿' };
@@ -90,68 +90,62 @@
       }).join('') + '</div></div></div></div></section>';
   }
 
-  function baseBanner() {
-    var o = D.by[sel];
-    return '<div class="base-banner"><span class="hint">Adding flavour to</span><span class="ipa base-glyph">' + esc(o.s) + '</span>' +
-      '<span class="base-name">' + esc(o.name) + '</span><span class="hint">Pick a different sound in the chart above.</span></div>';
-  }
-
-  // A folded section: closed by default, opened by its header; the header says what is applied inside.
-  function fold(key, title, hint, status, body) {
-    return '<details class="card fold" data-fold="' + key + '"' + (open[key] ? ' open' : '') + '>' +
-      '<summary>' + secIcon(key, key === 'dia' ? '◌̃' : 'ˈ') + '<span class="fold-title"><span class="fold-name">' + esc(title) + '</span><span class="hint">' + esc(hint) + '</span></span>' +
-      (status ? '<span class="fold-status">' + status + '</span>' : '') +
-      '<svg class="chevron" aria-hidden="true" viewBox="0 0 16 16"><path d="M3 6 L8 11 L13 6"></path></svg></summary>' +
-      '<div class="fold-body">' + baseBanner() + body + '</div></details>';
-  }
-
-  function diacriticMenu() {
-    var base = D.by[sel], active = activeDia(base), has = {};
-    active.forEach(function (x) { has[x.id] = true; });
-    var ids = active.map(function (x) { return x.id; });
-    var status = active.length ? '<span class="ipa">' + active.map(function (x) { return esc(x.glyph); }).join(' ') + '</span> ' + active.length + ' applied' : '';
-    var tile = function (x) {
-      var on = !!has[x.id];
-      // When off, would adding it work, and would the result have a real recording?
-      var why = on ? '' : DIA.reason(x.id, base, has);
-      var withIt = on ? ids : ids.concat([x.id]);
-      var recorded = !why && !!S.diacriticAudio(base.s, withIt);
-      var sub = why || (on ? 'Applied' : x.applies);
-      return '<button type="button" class="dia-tile' + (on ? ' is-selected' : '') + (why ? ' is-blocked' : '') + '" data-dia="' + x.id + '" aria-pressed="' + on + '"' +
-        (why ? ' aria-disabled="true"' : '') + ' title="' + esc(x.name + (why ? ': ' + why : ': ' + x.effect)) + '">' +
-        '<span class="ipa dia-glyph">' + esc(x.glyph) + '</span><span class="dia-text"><span class="dia-name">' + esc(x.name) +
-        (recorded ? '<span class="rec-dot" title="A recording exists for this combination">' + S.icons.speaker + '</span>' : '') +
-        '</span><span class="dia-sub">' + esc(sub) + '</span></span></button>';
+  // ---------- Modify tray (in the lesson panel) ----------
+  // Diacritics: the marks that can apply, by family; the ones that cannot are listed apart with reasons.
+  function diacriticTray(c) {
+    var base = c.base, has = {}, ids = c.active.map(function (x) { has[x.id] = true; return x.id; });
+    var usable = [], blocked = [];
+    DIA.list.forEach(function (x) {
+      var why = has[x.id] ? '' : DIA.reason(x.id, base, has);
+      (why ? blocked : usable).push({ x: x, why: why });
+    });
+    var chip = function (u) {
+      var x = u.x, on = !!has[x.id];
+      var recorded = !!S.diacriticAudio(base.s, on ? ids : ids.concat([x.id]));
+      return '<button type="button" class="mod-chip' + (on ? ' is-selected' : '') + '" data-dia="' + x.id + '" aria-pressed="' + on + '" title="' + esc(x.name + ': ' + x.effect) + '">' +
+        '<span class="ipa mod-glyph">' + esc(x.glyph) + '</span><span>' + esc(x.name) + '</span>' +
+        (recorded ? '<span class="rec-dot" aria-label="has a recording">' + S.icons.speaker + '</span>' : '') + '</button>';
     };
-    return fold('dia', 'Diacritics', 'Small marks that modify a sound, grouped by what they change', status,
-      '<p class="hint">Marks that cannot apply to [' + esc(base.s) + '], or that clash with one already chosen, say why. ' +
-      S.icons.speaker + ' means that combination has a real recording.</p>' +
-      DIA.groups.map(function (g) {
-        return '<div class="group"><div class="group-head"><h3>' + esc(g[1]) + '</h3><span class="hint">' + esc(g[2]) + '</span></div>' +
-          g[3].map(function (fam) {
-            return '<div class="dia-family"><div class="dia-family-name">' + esc(fam) + '</div><div class="dia-tiles">' +
-              DIA.list.filter(function (x) { return x.family === fam; }).map(tile).join('') + '</div></div>';
-          }).join('') + '</div>';
-      }).join(''));
+    var families = [];
+    DIA.groups.forEach(function (g) { g[3].forEach(function (f) { families.push(f); }); });
+    var rows = families.map(function (f) {
+      var inFam = usable.filter(function (u) { return u.x.family === f; });
+      return inFam.length ? '<div class="mod-row"><div class="mod-row-name">' + esc(f) + '</div><div class="mod-chips">' + inFam.map(chip).join('') + '</div></div>' : '';
+    }).join('');
+    var blockedList = blocked.length ? '<details class="mod-blocked"' + (trayOpenBlocked ? ' open' : '') + '><summary>Not available for [' + esc(c.sym.replace(c.p ? c.p.sym : '', '').trim() || base.s) + '] (' + blocked.length + ')</summary><ul>' +
+      blocked.map(function (u) {
+        return '<li><span class="ipa">' + esc(u.x.glyph) + '</span><span class="mod-b-name">' + esc(u.x.name) + '</span><span class="hint">' + esc(u.why) + '</span></li>';
+      }).join('') + '</ul></details>' : '';
+    return '<p class="hint mod-note">' + S.icons.speaker + ' marks a combination with its own recording.</p>' + rows + blockedList;
   }
 
-  function prosodyMenu() {
-    var p = pro ? proById[pro] : null;
-    var status = p ? '<span class="ipa">' + esc(p.sym) + '</span> ' + esc(p.name) : '';
-    return fold('pro', 'Prosody', 'Stress, length, breaks, tones and intonation', status,
-      '<p class="hint">These marks belong to syllables, words and phrases: how loud, how long, how high, and where the breaks fall. Pick one at a time.</p>' +
+  function prosodyTray() {
+    return '<p class="hint mod-note">Stress, length, breaks, tones and intonation belong to syllables and phrases. Pick one at a time.</p>' +
       PRO.groups.map(function (g) {
-        return '<div class="group"><div class="group-head"><h3>' + esc(g[1]) + '</h3><span class="hint">' + esc(g[2]) + '</span></div><div class="mark-tiles">' +
+        return '<div class="mod-row"><div class="mod-row-name">' + esc(g[1]) + '</div><div class="mod-chips">' +
           PRO.items.filter(function (x) { return x.grp === g[0]; }).map(function (x) {
             var on = x.id === pro;
-            return '<button type="button" class="mark-btn' + (on ? ' is-selected' : '') + '" data-pro="' + x.id + '" aria-pressed="' + on + '">' +
-              '<span class="ipa mark-glyph">' + esc(x.sym) + '</span><span class="mark-name">' + esc(x.name) + '</span></button>';
+            return '<button type="button" class="mod-chip' + (on ? ' is-selected' : '') + '" data-pro="' + x.id + '" aria-pressed="' + on + '" title="' + esc(x.desc) + '">' +
+              '<span class="ipa mod-glyph">' + esc(x.sym) + '</span><span>' + esc(x.name) + '</span></button>';
           }).join('') + '</div></div>';
-      }).join(''));
+      }).join('');
+  }
+
+  function tray(c) {
+    var p = c.p, nDia = c.active.length;
+    var applied = c.active.map(function (x) {
+      return '<button type="button" class="chip" data-remove-dia="' + x.id + '" aria-label="Remove ' + esc(x.name) + '"><span class="ipa">' + esc(x.glyph) + '</span>' + esc(x.name) + S.icons.close + '</button>';
+    }).join('') + (p ? '<button type="button" class="chip" data-remove-pro aria-label="Remove ' + esc(p.name) + '"><span class="ipa">' + esc(p.sym) + '</span>' + esc(p.name) + S.icons.close + '</button>' : '');
+    return '<section class="tray" aria-label="Modify this sound"><div class="tray-head"><h2>Modify</h2>' +
+      '<div class="segmented tray-tabs" role="tablist" aria-label="Kind of mark">' +
+      '<button type="button" role="tab" data-tray="dia" aria-selected="' + (trayTab === 'dia') + '" aria-pressed="' + (trayTab === 'dia') + '">Diacritics' + (nDia ? ' · ' + nDia : '') + '</button>' +
+      '<button type="button" role="tab" data-tray="pro" aria-selected="' + (trayTab === 'pro') + '" aria-pressed="' + (trayTab === 'pro') + '">Prosody' + (p ? ' · 1' : '') + '</button></div></div>' +
+      (c.flavoured ? '<div class="chips tray-applied">' + applied + '<button type="button" class="chip chip-clear" data-clear>Clear all</button></div>' : '') +
+      '<div class="tray-body" role="tabpanel">' + (trayTab === 'dia' ? diacriticTray(c) : prosodyTray()) + '</div></section>';
   }
 
   function renderMenu() {
-    el.querySelector('#menu').innerHTML = consonantChart() + diacriticMenu() + prosodyMenu();
+    el.querySelector('#menu').innerHTML = consonantChart();
   }
 
   // ---------- Composition ----------
@@ -265,27 +259,30 @@
         : '<button type="button" class="btn-play" data-play-sound="' + esc(o.s) + '">' + S.icons.play + '<span>Play sound</span></button>') +
       (p && c.rec ? '<button type="button" class="btn-secondary" data-play-dia>' + S.icons.play + '<span>[' + esc(c.sym.replace(p.sym, '').trim()) + ']</span></button>' : '') +
       (c.flavoured && (p || c.rec) ? '<button type="button" class="btn-secondary" data-play-sound="' + esc(o.s) + '">' + S.icons.play + '<span>Plain [' + esc(o.s) + ']</span></button>' : '') +
-      '<span class="play-msg" role="status"></span></div></div></div>';
+      '<span class="play-msg" role="status"></span></div>' +
+      // Speed and loop apply to recordings (the synthesized pitch keeps its own timing).
+      '<div class="playback" role="group" aria-label="Playback"><div class="segmented speed" role="group" aria-label="Speed">' +
+      [[0.5, '0.5×'], [0.75, '0.75×'], [1, '1×']].map(function (r) {
+        var on = S.audio.settings.rate === r[0];
+        return '<button type="button" data-rate="' + r[0] + '" aria-pressed="' + on + '">' + r[1] + '</button>';
+      }).join('') + '</div><button type="button" class="toggle-btn" data-loop aria-pressed="' + S.audio.settings.loop + '">' + S.icons.loop + '<span>Loop</span></button></div>' +
+      '</div></div>';
 
-    if (c.flavoured) {
-      h += '<div class="recipe"><span class="recipe-label hint">Built from</span><div class="chips">' +
-        '<span class="chip chip-base"><span class="ipa">' + esc(o.s) + '</span>' + esc(o.name) + '</span>' +
-        c.active.map(function (x) {
-          return '<button type="button" class="chip" data-remove-dia="' + x.id + '" aria-label="Remove ' + esc(x.name) + '"><span class="ipa">' + esc(x.glyph) + '</span>' + esc(x.name) + S.icons.close + '</button>';
-        }).join('') +
-        (p ? '<button type="button" class="chip" data-remove-pro aria-label="Remove ' + esc(p.name) + '"><span class="ipa">' + esc(p.sym) + '</span>' + esc(p.name) + S.icons.close + '</button>' : '') +
-        '<button type="button" class="chip chip-clear" data-clear>Clear flavour</button></div>' +
-        (c.active.length && !c.rec ? '<p class="hint">No recording of [' + esc(c.sym.replace(p ? p.sym : '', '')) + '] yet, so Play uses plain [' + esc(o.s) + '].</p>' : '') +
-        (c.rec ? '<p class="hint">Recording: <a href="' + esc(c.rec.page) + '" target="_blank" rel="noopener">' + esc(c.rec.file) + '</a>' +
-          (c.rec.author ? ' by ' + esc(c.rec.author) : '') + ', ' + esc(c.rec.licence) + ', via Wikimedia Commons' +
-          (c.rec.written && c.rec.written !== c.sym ? ' (filed there as [' + esc(c.rec.written) + '])' : '') + '.</p>' : '') + '</div>';
+    if (c.active.length && !c.rec) h += '<p class="hint rec-note">No recording of [' + esc(c.sym.replace(p ? p.sym : '', '')) + '] yet, so Play uses plain [' + esc(o.s) + '].</p>';
+    if (c.rec) {
+      h += '<p class="hint rec-note">Recording: <a href="' + esc(c.rec.page) + '" target="_blank" rel="noopener">' + esc(c.rec.file) + '</a>' +
+        (c.rec.author ? ' by ' + esc(c.rec.author) : '') + ', ' + esc(c.rec.licence) + ', via Wikimedia Commons' +
+        (c.rec.written && c.rec.written !== c.sym ? ' (filed there as [' + esc(c.rec.written) + '])' : '') + '.</p>';
     }
+
+    h += tray(c);
 
     h += '<div class="features">' + o.features.map(function (f) {
       return '<div class="feature"><div class="eyebrow">' + esc(f[0]) + '</div><div class="feature-v">' + esc(f[1]) + '</div></div>';
     }).join('') + '</div>';
 
-    h += '<section class="block"><h2>How it is made</h2><div class="tract-card"><div class="tract-wrap">' + S.tractSVG(c.tract) +
+    h += '<section class="block"><div class="block-head"><h2>How it is made</h2><button type="button" class="btn-secondary small" data-watch>' + S.icons.replay + '<span>Watch the movement</span></button></div>' +
+      '<div class="tract-card"><div class="tract-wrap">' + S.tractSVG(c.tract, { animate: true }) +
       '</div><dl class="legend">' + info.legend.map(function (l) {
         return '<div><dt class="eyebrow">' + esc(l[0]) + '</dt><dd>' + esc(l[1]) + '</dd></div>';
       }).join('') + '</dl></div><p>' + esc(info.how) + '</p></section>';
@@ -343,31 +340,29 @@
     if (focusSel) { var f = el.querySelector(focusSel); if (f) f.focus(); }
   }
 
-  function find(q) {
-    q = q.trim().toLowerCase();
-    if (!q) return null;
-    var hit = D.by[q] || D.all.filter(function (x) { return x.s.toLowerCase() === q || x.s.replace('͡', '') === q; })[0] ||
-      D.all.filter(function (x) { return x.name.toLowerCase().indexOf(q) >= 0; })[0];
-    return hit ? hit.s : null;
-  }
-
   S.views.sounds = {
     title: 'Sounds',
     mount: function (root) {
       el = root;
-      el.innerHTML = '<div class="split"><section class="pane-main" aria-label="Sounds and marks">' +
+      el.innerHTML = '<div class="split"><section class="pane-main" aria-label="IPA chart">' +
         '<div class="toolbar"><div class="toolbar-title"><h1 class="page-title">IPA chart</h1></div>' +
-        '<label class="search">' + S.icons.search + '<span class="sr-only">Search sounds</span>' +
-        '<input type="search" id="sound-search" placeholder="Symbol or name, e.g. velar nasal" autocomplete="off"></label></div>' +
+        '<button type="button" class="search search-btn" data-open-palette>' + S.icons.search + '<span>Search sounds</span><span class="kbd">Ctrl K</span></button></div>' +
         '<div id="menu"></div></section><aside class="pane-detail" id="detail" aria-label="Lesson" aria-live="polite"></aside></div>';
 
-      // Remember which folded sections are open, so re-rendering keeps them as the learner left them.
+      // Remember whether the "Not available" list in the tray is open across redraws.
       el.addEventListener('toggle', function (e) {
-        var k = e.target.getAttribute && e.target.getAttribute('data-fold');
-        if (k) open[k] = e.target.open;
+        if (e.target.classList && e.target.classList.contains('mod-blocked')) trayOpenBlocked = e.target.open;
       }, true);
 
       el.addEventListener('click', function (e) {
+        var tb = e.target.closest('[data-tray]');
+        if (tb) { trayTab = tb.getAttribute('data-tray'); render('#detail [data-tray="' + trayTab + '"]'); return; }
+        var rt = e.target.closest('[data-rate]');
+        if (rt) { S.audio.settings.rate = +rt.getAttribute('data-rate'); render('#detail [data-rate="' + rt.getAttribute('data-rate') + '"]'); return; }
+        if (e.target.closest('[data-loop]')) { S.audio.settings.loop = !S.audio.settings.loop; S.audio.stop(); render('#detail [data-loop]'); return; }
+        if (e.target.closest('[data-watch]')) { S.tractAnimate(el.querySelector('#detail svg.tract')); return; }
+        // Playing the sound also plays the movement on the diagram.
+        if (e.target.closest('#detail [data-play-sound], #detail [data-play-dia], #detail [data-play-pitch]')) S.tractAnimate(el.querySelector('#detail svg.tract'));
         var b = e.target.closest('[data-sym]');
         if (b) {
           var s = b.getAttribute('data-sym');
@@ -386,7 +381,7 @@
           return;
         }
         var pd = e.target.closest('[data-play-dia]');
-        if (pd) { var cc = compose(); if (cc.rec) S.withPlaying(pd, S.audio.playClip(cc.rec)); return; }
+        if (pd) { var cc = compose(); if (cc.rec) S.withPlaying(pd, function () { return S.audio.playClip(cc.rec); }); return; }
         var pr = e.target.closest('[data-pro]');
         if (pr) { var pid = pr.getAttribute('data-pro'); navigate(sel, dia, pro === pid ? null : pid); return; }
         var rd = e.target.closest('[data-remove-dia]');
@@ -397,15 +392,7 @@
         if (pp) {
           var c = compose(), o = c.base, segs = segmentsFor(c);
           var vowel = o.kind === 'vowel' ? S.audio.formants(c.tract.vheight, c.tract.vback, c.tract.rounded) : null;
-          S.withPlaying(pp, S.audio.playSegments(segs, vowel));
-        }
-      });
-      el.querySelector('#sound-search').addEventListener('input', function (e) {
-        var s = find(e.target.value);
-        if (s && s !== sel) {
-          var kept = DIA.resolve(dia, D.by[s]);
-          history.replaceState(null, '', hashFor(s, kept, pro));
-          window.dispatchEvent(new HashChangeEvent('hashchange'));
+          S.withPlaying(pp, function () { return S.audio.playSegments(segs, vowel); });
         }
       });
     },
@@ -423,22 +410,24 @@
       (q.d || '').split(',').forEach(function (id) { if (diaById[id]) dia[id] = true; });
       pro = proById[q.p] ? q.p : null;
       var reveal = q.open === 'dia' || q.open === 'pro' ? q.open : null;
-      if (reveal) open[reveal] = true;
+      if (reveal) trayTab = reveal;
+      else if (pro && !Object.keys(dia).length && !fromMenu) trayTab = 'pro';
       var baseChanged = sel !== lastBase, external = !fromMenu;
       lastBase = sel;
       fromMenu = false;
 
-      // Keep keyboard focus on the button that was pressed, since the menu is redrawn.
+      // Keep keyboard focus on the button that was pressed, since both panes are redrawn.
       var a = document.activeElement, focusSel = null;
-      if (a && a.closest && a.closest('#menu')) {
-        ['data-sym', 'data-dia', 'data-pro'].forEach(function (attr) {
-          if (a.hasAttribute(attr)) focusSel = '#menu [' + attr + '="' + a.getAttribute(attr).replace(/"/g, '\\"') + '"]';
+      if (a && a.closest) {
+        var pane = a.closest('#menu') ? '#menu' : a.closest('#detail') ? '#detail' : null;
+        if (pane) ['data-sym', 'data-dia', 'data-pro'].forEach(function (attr) {
+          if (a.hasAttribute(attr)) focusSel = pane + ' [' + attr + '="' + a.getAttribute(attr).replace(/"/g, '\\"') + '"]';
         });
       }
       render(focusSel);
 
-      // Arriving from elsewhere (a link, search, an old address): bring the relevant part of the menu into view.
-      if (reveal) { var fd = el.querySelector('[data-fold="' + reveal + '"]'); if (fd) fd.scrollIntoView({ block: 'start' }); }
+      // Arriving from elsewhere (a link, search, an old address): bring the relevant part into view.
+      if (reveal) { var tr = el.querySelector('#detail .tray'); if (tr) tr.scrollIntoView({ block: 'nearest' }); }
       else if (external && baseChanged) {
         var btn = el.querySelector('#menu [data-sym].is-selected');
         if (btn && window.matchMedia('(min-width: 900px)').matches) btn.scrollIntoView({ block: 'center' });

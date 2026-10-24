@@ -93,12 +93,17 @@
       el.querySelector('#tr-phonetic').addEventListener('change', function (e) { opts.phonetic = e.target.checked; renderResult(); });
       el.querySelector('#tr-stress').addEventListener('change', function (e) { opts.stress = e.target.checked; renderResult(); });
       el.querySelector('#tr-speak').addEventListener('click', function (e) {
-        S.withPlaying(e.currentTarget, S.audio.speak(text, 'English (American)'));
+        S.withPlaying(e.currentTarget, function () { return S.audio.speak(text, 'English (American)'); });
       });
       document.addEventListener('sipa:voices', function () { if (el.isConnected) renderResult(); });
     },
     update: function () {
       document.title = 'English to IPA · SmartIPA';
+      // Text sent from the search palette ("Transcribe …").
+      if (S.pendingTranscribe) {
+        text = S.pendingTranscribe; S.pendingTranscribe = null;
+        el.querySelector('#tr-in').value = text;
+      }
       loadDictionary().then(renderResult, function () {
         el.querySelector('#tr-out').innerHTML = '<span class="empty">The pronunciation dictionary could not be loaded. Check that data/cmudict.js was uploaded with the site.</span>';
       });

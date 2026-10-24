@@ -2,9 +2,12 @@
 
 A web app for learning the International Phonetic Alphabet.
 
-- **Sounds**: one page on the left showing the consonant and vowel charts, with folded Diacritics and Prosody sections underneath that open with a click, and a lesson panel on the right. Pick a sound, then add diacritics and a prosody mark as "flavour". The panel shows the composed symbol and its name, the recording, a vocal-tract diagram with the place of articulation circled, what each mark does, a playable pitch-and-timing graph for prosody, an example word and similar sounds. The URL records the whole combination, e.g. `#/sounds/a?d=nas&p=tf` is a nasalized [a] with a falling tone.
-- **Diacritics in detail**: the 31 diacritics are arranged in small families (voicing, phonation, contact point, release and so on). Each one checks the chosen sound and the marks already applied, and a mark that cannot work, such as aspiration on [b], nasalization on [t] or Advanced together with Retracted, is shown unavailable with the reason. 227 combinations have their own recordings from Wikimedia Commons (for example [n̥], [pʰ], [ɔ̃], [kʷ], [sˤ]); those are marked in the menu and played instead of the plain sound.
-- **Practice**: four drills: hear a sound and pick its symbol, name a symbol, read the vocal-tract diagram, and transcribe English words in the class conventions with an on-screen IPA keyboard. Wrong answers come back more often; progress stays in the browser.
+SmartIPA is a neutral reference and practice tool. It has no accounts, keeps no scores or progress, and suggests no learning path.
+
+- **Sounds**: the consonant and vowel charts on the left, the lesson for the chosen sound on the right. The lesson has the recording (played at 0.5×, 0.75× or 1×, optionally looping), the phonetic name, a vocal-tract diagram that can play the movement from rest into the sound and back, an example word and similar sounds. The URL records the whole combination, e.g. `#/sounds/a?d=nas&p=tf` is a nasalized [a] with a falling tone.
+- **Modify tray**: inside the lesson, a Diacritics and a Prosody tab add marks to the chosen sound. The 31 diacritics are arranged in families (voicing, phonation, contact point, release and so on). A mark that cannot work, such as aspiration on [b], nasalization on [t] or Advanced together with Retracted, is listed under "Not available" with the reason. 227 combinations have their own recordings from Wikimedia Commons (for example [n̥], [pʰ], [ɔ̃], [kʷ], [sˤ]); they are marked with a dot and played instead of the plain sound.
+- **Search** (Ctrl K or /): find a sound by symbol, X-SAMPA (`S`, `N`, `@`), English spelling (`sh`, `th`, `ng`), example word, or description (`voiced velar`). Phrases like `aspirated t` or `voiceless n` open the combination. Any text can be sent to Transcribe.
+- **Practice**: four drills: hear a sound and pick its symbol, name a symbol, read the vocal-tract diagram, and transcribe English words in the class conventions with an on-screen IPA keyboard. Questions are random and nothing about the answers is saved.
 - **Transcribe**: type English and get an IPA transcription (General American) in the class conventions of "IPA for English" (rev. 2025-01-08): /aj/ buy, /ɔj/ boy, /aw/ how, /ej/ date, /ow/ hope, /ɑ/ dog, /ɔ/ only before r, /ɹ/ for r, /ə ɚ/ unstressed and /ʌ ɝ/ stressed. An option adds aspiration (pʰ tʰ kʰ) and flaps (ɾ). Every symbol in the result links to its sound.
 
 It is a plain static site: HTML, CSS and JavaScript with no build step and no server code.
@@ -48,8 +51,9 @@ Prosody playback is synthesized in the browser.
 | `js/data/dia-audio.js` | Recordings of diacritic combinations (generated from Wikimedia data) |
 | `js/tract.js` | Vocal-tract line drawing |
 | `js/audio.js` | Recordings, synthesized pitch and device speech |
-| `js/views/sounds.js` | The Sounds menu and lesson panel, including diacritics and prosody |
+| `js/views/sounds.js` | The chart and the lesson panel, including the modify tray and playback controls |
 | `js/views/practice.js` | Practice drills |
+| `js/palette.js` | Search palette (Ctrl K): symbols, X-SAMPA, English spellings and diacritic phrases |
 | `js/views/transcribe.js`, `js/views/credits.js` | Transcribe tab and Credits page |
 | `src/english-to-ipa.js` | English to IPA function (`SmartIPA.transcribe(text)`) |
 | `data/cmudict.js` | CMU Pronouncing Dictionary as a script (about 3.6 MB, loaded only when Transcribe opens) |

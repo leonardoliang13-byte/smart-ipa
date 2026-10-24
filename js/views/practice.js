@@ -1,11 +1,10 @@
 /* Practice: short drills that test what the chart teaches. Route: #/practice/<mode>
    Modes: listen (hear a recording, pick the symbol), name (see a symbol, pick its name),
    diagram (read the vocal tract, pick the symbol), transcribe (write an English word in IPA, class conventions).
-   Sounds answered wrongly come back more often; progress is kept in this browser only. */
+   A neutral tool: questions are drawn at random and nothing about past answers is kept. */
 (function (S) {
   'use strict';
   var esc = S.esc, D = S.sounds;
-  var KEY = 'smartipa.practice.v1';
   var MODES = [
     ['listen', 'Listen', 'Hear a sound, pick its symbol'],
     ['name', 'Name it', 'See a symbol, pick its description'],
@@ -23,10 +22,6 @@
   var KEYS = 'ɑ æ ɛ ɪ i ʊ u ʌ ə ɚ ɝ ɔ aj aw ɔj ej ow ŋ ɹ ʃ ʒ tʃ dʒ θ ð ɾ j w ʔ'.split(' ');
 
   var el, mode = 'listen', scope = 'all', q = null, answered = false, loadingDict = null;
-  var stats = { modes: {}, miss: {} };
-  try { var saved = JSON.parse(localStorage.getItem(KEY) || 'null'); if (saved && saved.modes) stats = saved; } catch (e) {}
-  var save = function () { try { localStorage.setItem(KEY, JSON.stringify(stats)); } catch (e) {} };
-  var ms = function () { return stats.modes[mode] || (stats.modes[mode] = { right: 0, total: 0, streak: 0, best: 0 }); };
 
   function pool() {
     var all = D.all.filter(function (o) { return o.audio; });
@@ -36,12 +31,10 @@
     return all;
   }
 
-  // Weighted pick: sounds missed before are more likely to come up again.
+  // A random sound, avoiding an immediate repeat.
   function pickTarget(list, avoid) {
-    var weights = list.map(function (o) { return o.s === avoid ? 0 : 1 + 3 * Math.min(stats.miss[o.s] || 0, 3); });
-    var total = weights.reduce(function (a, b) { return a + b; }, 0), r = Math.random() * total;
-    for (var i = 0; i < list.length; i++) { r -= weights[i]; if (r <= 0) return list[i]; }
-    return list[list.length - 1];
+    var choices = list.filter(function (o) { return o.s !== avoid; });
+    return choices[Math.floor(Math.random() * choices.length)];
   }
 
   // Distractors that are plausibly confusable: same kind, sharing place, manner or voicing (or near on the vowel chart).
@@ -73,13 +66,6 @@
     q = { target: t, options: opts, picked: null };
   }
 
-  function statusBar() {
-    var m = ms(), pct = m.total ? Math.round(100 * m.right / m.total) : 0;
-    return '<div class="pr-stats"><div><span class="pr-num">' + m.right + '/' + m.total + '</span><span class="hint">correct' + (m.total ? ' · ' + pct + '%' : '') + '</span></div>' +
-      '<div><span class="pr-num">' + m.streak + '</span><span class="hint">streak</span></div>' +
-      '<div><span class="pr-num">' + m.best + '</span><span class="hint">best streak</span></div>' +
-      '<button type="button" class="chip chip-clear" data-reset>Reset</button></div>';
-  }
 
   function questionHTML() {
     var t = q.target;
@@ -108,7 +94,7 @@
     var t = q.target, right = q.picked === t.s;
     return '<div class="pr-feedback ' + (right ? 'is-right' : 'is-wrong') + '">' +
       '<div><strong>' + (right ? 'Correct.' : 'Not quite.') + '</strong> <span class="ipa">[' + esc(t.s) + ']</span> is the ' + esc(t.name.toLowerCase()) + '.' +
-      (right ? '' : ' It will come up again soon.') + '</div>' +
+      '</div>' +
       '<div class="pr-actions"><a class="btn-secondary" href="#/sounds/' + encodeURIComponent(t.s) + '">Open its lesson</a>' +
       (mode !== 'listen' ? '<button type="button" class="btn-secondary" data-pr-hear>' + S.icons.play + '<span>Hear it</span></button>' : '') +
       '<button type="button" class="btn-play" data-next>Next</button></div></div>';
@@ -157,18 +143,11 @@
       (answered ? '' : '<button type="button" class="btn-play" data-check>Check</button>') + '</div>' + (answered ? '' : keys) + fb;
   }
 
-  function record(right, sym) {
-    var m = ms();
-    m.total++;
-    if (right) { m.right++; m.streak++; m.best = Math.max(m.best, m.streak); if (sym && stats.miss[sym]) stats.miss[sym] = Math.max(0, stats.miss[sym] - 1); }
-    else { m.streak = 0; if (sym) stats.miss[sym] = (stats.miss[sym] || 0) + 1; }
-    save();
-  }
 
   function render() {
     var body = mode === 'transcribe' ? transcribeHTML() : questionHTML() + optionsHTML() + feedbackHTML();
     el.innerHTML = '<div class="narrow practice">' +
-      '<div class="page-head"><h1>Practice</h1><p class="hint">Short drills on what the chart teaches. Sounds you miss come back more often. Progress stays in this browser.</p></div>' +
+      '<div class="page-head"><h1>Practice</h1><p class="hint">Short drills on what the chart teaches. Each question is random, and nothing about your answers is saved.</p></div>' +
       '<div class="pr-modes" role="group" aria-label="Drill">' + MODES.map(function (m) {
         return '<a class="pr-mode' + (m[0] === mode ? ' is-selected' : '') + '" href="#/practice/' + m[0] + '"' + (m[0] === mode ? ' aria-current="true"' : '') + '>' +
           '<span class="pr-mode-name">' + esc(m[1]) + '</span><span class="pr-mode-sub">' + esc(m[2]) + '</span></a>';
@@ -176,7 +155,7 @@
       (mode === 'transcribe' ? '' : '<div class="pr-scopes" role="group" aria-label="Which sounds">' + SCOPES.map(function (s) {
         return '<button type="button" class="chip' + (s[0] === scope ? ' is-on' : '') + '" data-scope="' + s[0] + '" aria-pressed="' + (s[0] === scope) + '">' + esc(s[1]) + '</button>';
       }).join('') + '</div>') +
-      '<section class="card pr-card">' + statusBar() + body + '</section></div>';
+      '<section class="card pr-card">' + body + '</section></div>';
     var inp = el.querySelector('#pr-input');
     if (inp && !answered) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
   }
@@ -184,7 +163,7 @@
   function answer(sym) {
     if (answered || !q || mode === 'transcribe') return;
     q.picked = sym; answered = true;
-    record(sym === q.target.s, q.target.s);
+
     render();
   }
   function check() {
@@ -193,7 +172,7 @@
     q.typed = inp ? inp.value : q.typed;
     if (!norm(q.typed)) return;
     answered = true;
-    record(answers(q.word).map(norm).indexOf(norm(q.typed)) >= 0, null);
+
     render();
   }
   function next() { newQuestion(); render(); }
@@ -208,10 +187,9 @@
         if ((t = e.target.closest('[data-scope]'))) { scope = t.getAttribute('data-scope'); next(); return; }
         if (e.target.closest('[data-next]')) return next();
         if (e.target.closest('[data-check]')) return check();
-        if ((t = e.target.closest('[data-pr-play]'))) return S.withPlaying(t, S.audio.playSound(q.target.s));
-        if ((t = e.target.closest('[data-pr-hear]'))) return S.withPlaying(t, S.audio.playSound(q.target.s));
-        if ((t = e.target.closest('[data-pr-say]'))) return S.withPlaying(t, S.audio.speak(q.word, 'English (American)'));
-        if (e.target.closest('[data-reset]')) { stats.modes[mode] = { right: 0, total: 0, streak: 0, best: 0 }; save(); render(); return; }
+        if ((t = e.target.closest('[data-pr-play]'))) return S.withPlaying(t, function () { return S.audio.playSound(q.target.s); });
+        if ((t = e.target.closest('[data-pr-hear]'))) return S.withPlaying(t, function () { return S.audio.playSound(q.target.s); });
+        if ((t = e.target.closest('[data-pr-say]'))) return S.withPlaying(t, function () { return S.audio.speak(q.word, 'English (American)'); });
         if ((t = e.target.closest('[data-key]'))) {
           var inp = el.querySelector('#pr-input'), k = t.getAttribute('data-key');
           if (!inp) return;
@@ -221,7 +199,7 @@
       });
       el.addEventListener('input', function (e) { if (e.target.id === 'pr-input') q.typed = e.target.value; });
       document.addEventListener('keydown', function (e) {
-        if (!el.isConnected || el.hidden || e.altKey || e.ctrlKey || e.metaKey) return;
+        if (!el.isConnected || el.hidden || e.altKey || e.ctrlKey || e.metaKey || document.body.classList.contains('has-palette')) return;
         if (mode === 'transcribe') {
           if (e.key === 'Enter') { e.preventDefault(); if (answered) next(); else check(); }
           return;
@@ -245,7 +223,7 @@
       // The Listen drill starts by playing the sound, where the browser allows it.
       if (mode === 'listen' && !answered && q && q.target && changed) {
         var b = el.querySelector('[data-pr-play]');
-        if (b) S.withPlaying(b, S.audio.playSound(q.target.s));
+        if (b) S.withPlaying(b, function () { return S.audio.playSound(q.target.s); });
       }
     }
   };

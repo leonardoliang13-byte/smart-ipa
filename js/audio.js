@@ -2,10 +2,14 @@
    speech voice for example words. */
 (function (S) {
   'use strict';
-  var current = null, ctx = null;
+  var current = null, settle = null, ctx = null;
+  // Playback settings for recordings: speed (pitch is preserved by the browser) and looping.
+  var settings = { rate: 1, loop: false };
 
+  // Stops whatever is playing and settles its promise, so buttons showing "Playing" reset.
   function stop() {
     if (current) { current.pause(); current = null; }
+    if (settle) { var f = settle; settle = null; f(); }
     if (root.speechSynthesis) root.speechSynthesis.cancel();
   }
   var root = window;
@@ -22,11 +26,15 @@
     stop();
     var urls = [audio.mp3, audio.original];
     return new Promise(function (resolve, reject) {
+      settle = resolve;
       var tryUrl = function (i) {
-        if (i >= urls.length) { reject(new Error('Recording could not be loaded')); return; }
+        if (i >= urls.length) { settle = null; reject(new Error('Recording could not be loaded')); return; }
         var a = new Audio(urls[i]);
         current = a;
-        a.onended = function () { if (current === a) current = null; resolve(); };
+        a.playbackRate = settings.rate;
+        a.preservesPitch = true;
+        a.loop = settings.loop;
+        a.onended = function () { if (current === a) { current = null; settle = null; } resolve(); };
         a.onerror = function () { if (current === a) tryUrl(i + 1); };
         var p = a.play();
         if (p && p.catch) p.catch(function (e) { if (e && e.name === 'NotAllowedError') reject(e); });
@@ -75,7 +83,7 @@
         t += (s.d + s.gap) * unit;
       });
     } catch (e) { return Promise.reject(e); }
-    return new Promise(function (resolve) { setTimeout(resolve, total * 1000 + 100); });
+    return new Promise(function (resolve) { settle = resolve; setTimeout(function () { if (settle === resolve) settle = null; resolve(); }, total * 1000 + 100); });
   }
 
   // Device text-to-speech, used only for example words and the Transcribe tab.
@@ -102,7 +110,8 @@
     return new Promise(function (resolve) {
       var u = new SpeechSynthesisUtterance(text);
       u.voice = v; u.lang = v.lang; u.rate = 0.85;
-      u.onend = resolve; u.onerror = resolve;
+      settle = resolve;
+      u.onend = function () { settle = null; resolve(); }; u.onerror = u.onend;
       root.speechSynthesis.speak(u);
     });
   }
@@ -113,5 +122,9 @@
     });
   }
 
-  S.audio = { playSound: playSound, playClip: playClip, playSegments: playSegments, formants: formants, speak: speak, canSpeak: function (l) { return !!voiceFor(l); }, stop: stop };
+  S.audio = {
+    playSound: playSound, playClip: playClip, playSegments: playSegments, formants: formants, speak: speak,
+    canSpeak: function (l) { return !!voiceFor(l); }, stop: stop, settings: settings,
+    isPlaying: function () { return !!settle; }
+  };
 })(window.SIPA = window.SIPA || {});

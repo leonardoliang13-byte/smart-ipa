@@ -13,6 +13,9 @@
   // Load Charis SIL with exactly the characters the app shows. Google Fonts otherwise splits the font
   // into Unicode-range pieces, and combining marks such as the tie bar (U+0361) can land in a piece the
   // browser never loads, so "t͡s" shows a box. A single subset keeps every mark in the same font file.
+  // Older versions kept Practice scores. This is a neutral tool now, so remove them.
+  try { localStorage.removeItem('smartipa.practice.v1'); } catch (e) {}
+
   (function loadIpaFont() {
     var chars = {};
     var add = function (s) { Array.from(String(s || '')).forEach(function (c) { chars[c] = true; }); };
@@ -34,12 +37,16 @@
   })();
 
   // Shows "Playing" on a button while a playback promise runs, and a message if it fails.
-  S.withPlaying = function (btn, promise) {
+  // `start` is a function that begins playback and returns its promise. Pressing a button that is
+  // already playing stops it instead (needed once playback can loop).
+  S.withPlaying = function (btn, start) {
+    if (btn.classList.contains('is-playing')) { S.audio.stop(); return; }
+    var promise = typeof start === 'function' ? start() : start;
     var label = btn.querySelector('span');
     var before = label ? label.textContent : '';
     var msg = btn.parentNode.querySelector('.play-msg');
     btn.classList.add('is-playing');
-    if (label) label.textContent = 'Playing';
+    if (label) label.textContent = 'Stop';
     if (msg) msg.textContent = '';
     var done = function () { btn.classList.remove('is-playing'); if (label) label.textContent = before; };
     promise.then(done, function (e) {
@@ -70,9 +77,9 @@
 
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-play-sound]');
-    if (b) { S.withPlaying(b, S.audio.playSound(b.getAttribute('data-play-sound'))); return; }
+    if (b) { S.withPlaying(b, function () { return S.audio.playSound(b.getAttribute('data-play-sound')); }); return; }
     var sp = e.target.closest('[data-speak]');
-    if (sp) S.withPlaying(sp, S.audio.speak(sp.getAttribute('data-speak'), sp.getAttribute('data-lang')));
+    if (sp) S.withPlaying(sp, function () { return S.audio.speak(sp.getAttribute('data-speak'), sp.getAttribute('data-lang')); });
   });
   window.addEventListener('hashchange', function () { S.audio.stop(); route(); });
   route();

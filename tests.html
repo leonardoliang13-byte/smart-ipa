@@ -35,6 +35,7 @@
 <script src="js/tract.js"></script>
 <script src="data/cmudict.js"></script>
 <script src="src/english-to-ipa.js"></script>
+<script src="js/palette.js"></script>
 <script>
 (function () {
   var T = function (s, o) { return SmartIPA.transcribe(s, o); };
@@ -92,7 +93,23 @@
     ['31 diacritics', String(S.diacritics.list.length), '31'],
     ['every diacritic has a family and a scope', String(S.diacritics.list.filter(function (x) { return x.family && x.applies; }).length), '31'],
     ['every chart sound accepts at least one diacritic', String(S.sounds.all.filter(function (o) { return S.diacritics.list.some(function (x) { return !S.diacritics.reason(x.id, o, {}); }); }).length), '121'],
-    ['24 prosody marks', String(S.prosody.items.length), '24']
+    ['24 prosody marks', String(S.prosody.items.length), '24'],
+    ['every animated tract morphs between same-shaped paths', String(S.sounds.all.filter(function (o) {
+      var svg = S.tractSVG(S.tractParams(o), { animate: true }), ok = /<animate /.test(svg);
+      svg.replace(/values="([^"]*)"/g, function (m, v) {
+        if (/^[\d.;\s]+$/.test(v)) return m;
+        var shapes = v.split(';').map(function (d) { return d.replace(/-?\d*\.?\d+(e-?\d+)?/g, '#').replace(/\s+/g, ' ').trim(); });
+        if (shapes.some(function (x) { return x !== shapes[0]; })) ok = false;
+        return m;
+      });
+      return ok;
+    }).length), '121'],
+    ['search: X-SAMPA S finds ʃ', S.palette.search('S')[0].sym, 'ʃ'],
+    ['search: "velar" lists k first', S.palette.search('velar')[0].sym, 'k'],
+    ['search: "sh" finds ʃ', S.palette.search('sh')[0].sym, 'ʃ'],
+    ['search: "aspirated t" offers tʰ', S.palette.search('aspirated t')[0].sym, 'tʰ'],
+    ['search: "voiceless n" offers n̥', S.palette.search('voiceless n')[0].sym, 'n̥'],
+    ['search always offers Transcribe', S.palette.search('zzzq').slice(-1)[0].action, 'transcribe']
   ];
   var pass = 0, body = document.getElementById('tests');
   cases.forEach(function (c) {

@@ -61,7 +61,9 @@
   }
   var smooth = function (t) { t = Math.max(0, Math.min(1, t)); return t * t * (3 - 2 * t); };
 
-  S.tractSVG = function (P) {
+  // All moving parts for one articulation, as path strings and positions. Place 'rest' gives the
+  // neutral pose (tongue relaxed, lips apart, velum raised) used as the start of the animation.
+  function geometry(P) {
     P = P || {};
     var kind = P.kind || 'consonant', place = P.place || 'alveolar', manner = P.manner || 'plosive';
     var voiced = !!P.voiced, sec = P.secondary || 'none', isV = kind === 'vowel';
@@ -98,7 +100,8 @@
         pharyngeal: function () { s.front = [380, 462]; s.back = [520, 484]; s.root = [656 - g, 612]; s.root2 = [610, 700]; },
         epiglottal: function () { s.back = [520, 492]; s.root = [600, 600]; s.root2 = [640 - g, 712]; }
       };
-      if (place === 'bilabial') { lipUp = 62 - g * 1.5; T = TARGET.bilabial; }
+      if (place === 'rest') { T = null; }
+      else if (place === 'bilabial') { lipUp = 62 - g * 1.5; T = TARGET.bilabial; }
       else if (place === 'labiodental') { lipUp = 50 - g; lipFwd = 46; T = TARGET.labiodental; }
       else if (place === 'glottal') { T = TARGET.glottal; }
       else if (place === 'labialvelar') {
@@ -161,23 +164,65 @@
       : buzz ? 'M 640 930 l 12 -12 l 12 24 l 12 -24 l 12 24 l 12 -24 l 12 24 l 12 -24 l 12 24 l 12 -24 l 12 12'
       : 'M 640 930 L 672 930 M 728 930 L 760 930';
 
-    var alt = isV ? 'Side view of the head showing the tongue position for this vowel'
-      : 'Side view of the head with the ' + place + ' place of articulation circled';
+    return {
+      lower: pathD(lowerSegs),
+      palate: pathD(BASE.palate, velumTf),
+      teethL: pathD(BASE.teethL, function (x, y) { return jawAt(x, y, 1); }),
+      folds: folds, hl: hl, h2: h2,
+      ejective: manner === 'ejective' && !isV, implosive: manner === 'implosive' && !isV,
+      oral: !nasal && !stopped, nose: lowered,
+      alt: isV ? 'Side view of the head showing the tongue position for this vowel'
+        : 'Side view of the head with the ' + place + ' place of articulation circled'
+    };
+  }
+
+  // The neutral pose a sound is animated from.
+  function restOf(P) {
+    return P.kind === 'vowel'
+      ? { kind: 'vowel', vheight: 0.5, vback: 0.5, rounded: false, voiced: true }
+      : { kind: 'consonant', place: 'rest', manner: 'approximant', voiced: !!P.voiced };
+  }
+
+  // Timing of the gesture: start at the target, relax, form the articulation, hold, release, settle back.
+  var KEYS = '0;0.12;0.42;0.62;0.84;1', DUR = '1.8s';
+  var SPLINES = '0.4 0 0.2 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0.4 0 0.2 1';
+  function morph(target, rest) {
+    var v = [target, rest, target, target, rest, target].join(';');
+    return '<animate attributeName="d" begin="indefinite" dur="' + DUR + '" keyTimes="' + KEYS + '" calcMode="spline" keySplines="' + SPLINES + '" values="' + v + '"></animate>';
+  }
+
+  // opts.animate: include the movement, started later with S.tractAnimate(svg).
+  S.tractSVG = function (P, opts) {
+    P = P || {};
+    var g = geometry(P), anim = opts && opts.animate;
+    var r = anim ? geometry(restOf(P)) : null;
     var ln = function (d, cls) { return '<path class="' + (cls || 'ln') + '" d="' + d + '"></path>'; };
-    var svg = '<svg class="tract" viewBox="0 0 800 1000" role="img" aria-label="' + alt + '">' +
+    var moving = function (key, cls) {
+      return '<path class="' + (cls || 'ln') + '" d="' + g[key] + '">' + (anim ? morph(g[key], r[key]) : '') + '</path>';
+    };
+    var focusFade = anim ? '<animate attributeName="opacity" begin="indefinite" dur="' + DUR + '" keyTimes="' + KEYS + '" values="1;0;1;1;0;1"></animate>' : '';
+    var svg = '<svg class="tract" viewBox="0 0 800 1000" role="img" aria-label="' + g.alt + '">' +
       ln(pathD(BASE.head)) +
-      ln(pathD(lowerSegs)) +
-      ln(pathD(BASE.palate, velumTf)) +
+      moving('lower') +
+      moving('palate') +
       ln(pathD(BASE.larynx)) +
       '<path class="ln fill" d="' + pathD(BASE.teethU) + '"></path>' +
-      '<path class="ln fill" d="' + pathD(BASE.teethL, function (x, y) { return jawAt(x, y, 1); }) + '"></path>' +
-      ln(folds, 'ln thin');
-    if (manner === 'ejective' && !isV) svg += ln('M 780 860 L 780 790 M 766 806 L 780 790 L 794 806', 'ln thin');
-    if (manner === 'implosive' && !isV) svg += ln('M 780 790 L 780 860 M 766 844 L 780 860 L 794 844', 'ln thin');
-    if (!nasal && !stopped) svg += ln('M 70 470 L 14 470 M 32 454 L 14 470 L 32 486', 'ln thin');
-    if (lowered) svg += ln('M 22 262 L 4 296 M 4 274 L 4 296 L 22 288', 'ln thin');
-    if (h2) svg += '<ellipse class="focus" cx="' + h2[0] + '" cy="' + h2[1] + '" rx="38" ry="30"></ellipse>';
-    svg += '<ellipse class="focus" cx="' + Math.round(hl[0]) + '" cy="' + Math.round(hl[1]) + '" rx="38" ry="30"></ellipse>';
+      moving('teethL', 'ln fill') +
+      ln(g.folds, 'ln thin');
+    if (g.ejective) svg += ln('M 780 860 L 780 790 M 766 806 L 780 790 L 794 806', 'ln thin');
+    if (g.implosive) svg += ln('M 780 790 L 780 860 M 766 844 L 780 860 L 794 844', 'ln thin');
+    if (g.oral) svg += ln('M 70 470 L 14 470 M 32 454 L 14 470 L 32 486', 'ln thin');
+    if (g.nose) svg += ln('M 22 262 L 4 296 M 4 274 L 4 296 L 22 288', 'ln thin');
+    if (g.h2) svg += '<ellipse class="focus" cx="' + g.h2[0] + '" cy="' + g.h2[1] + '" rx="38" ry="30">' + focusFade + '</ellipse>';
+    if (g.hl) svg += '<ellipse class="focus" cx="' + Math.round(g.hl[0]) + '" cy="' + Math.round(g.hl[1]) + '" rx="38" ry="30">' + focusFade + '</ellipse>';
     return svg + '</svg>';
+  };
+
+  // Plays the movement of an animated drawing once, unless the viewer prefers reduced motion.
+  S.tractAnimate = function (svg) {
+    if (!svg || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    Array.prototype.forEach.call(svg.querySelectorAll('animate'), function (a) {
+      try { a.beginElement(); } catch (e) {}
+    });
   };
 })(window.SIPA = window.SIPA || {});
