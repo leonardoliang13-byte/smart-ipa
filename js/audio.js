@@ -143,7 +143,33 @@
     });
   }
 
+  // Microphone take for "Record yourself". It lives only in memory as a blob URL and is never uploaded.
+  var rec = null;
+  function canRecord() { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && root.MediaRecorder); }
+  function record(maxMs) {
+    stop();
+    return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } }).then(function (stream) {
+      return new Promise(function (resolve, reject) {
+        var chunks = [], mr = new MediaRecorder(stream), timer;
+        var finish = function () { stream.getTracks().forEach(function (t) { t.stop(); }); rec = null; clearTimeout(timer); };
+        mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+        mr.onstop = function () {
+          finish();
+          if (!chunks.length) { reject(new Error('Nothing was recorded')); return; }
+          var blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
+          resolve({ url: URL.createObjectURL(blob), type: blob.type });
+        };
+        mr.onerror = function (e) { finish(); reject(e.error || e); };
+        rec = mr;
+        mr.start();
+        timer = setTimeout(function () { if (mr.state === 'recording') mr.stop(); }, maxMs || 4000);
+      });
+    });
+  }
+  function stopRecording() { if (rec && rec.state === 'recording') rec.stop(); }
+
   S.audio = {
+    canRecord: canRecord, record: record, stopRecording: stopRecording, isRecording: function () { return !!rec; },
     playSound: playSound, playClip: playClip, playSequence: playSequence, playSegments: playSegments, formants: formants, speak: speak,
     canSpeak: function (l) { return !!voiceFor(l); }, stop: stop, settings: settings,
     isPlaying: function () { return !!settle; }

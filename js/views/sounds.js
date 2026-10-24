@@ -9,6 +9,9 @@
   var trayTab = 'dia', trayOpenBlocked = false;
   // On phones the lesson is a sheet that slides up over the chart.
   var sheetOpen = false, touch = null;
+  // "Record yourself": the take for the current sound, kept in memory only.
+  var myTake = null;
+  function dropTake() { if (myTake) { URL.revokeObjectURL(myTake.url); myTake = null; } }
   var isPhone = function () { return window.matchMedia('(max-width: 699px)').matches; };
 
   var BEFORE = { ps: 1, ss: 1, ds: 1, us: 1, gr: 1, gf: 1 };
@@ -361,6 +364,17 @@
         '</div></section>';
     }
 
+    var model = c.rec || (c.active.length ? null : o.audio);
+    if (model && S.audio.canRecord()) {
+      var have = myTake && myTake.key === c.sym;
+      h += '<section class="block self"><h2>Record yourself</h2><p class="hint">Say [' + esc(c.sym) + '], then hear the recording and your take one after the other. ' +
+        'Your take stays in this browser tab and is discarded when you move to another sound.</p><div class="self-row">' +
+        '<button type="button" class="btn-secondary" data-self-rec><span class="rec-dot-red" aria-hidden="true"></span><span>' + (have ? 'Record again' : 'Record (up to 4 s)') + '</span></button>' +
+        (have ? '<button type="button" class="btn-play" data-self-ab>' + S.icons.play + '<span>Recording, then yours</span></button>' +
+          '<button type="button" class="btn-secondary" data-self-play>' + S.icons.play + '<span>Yours</span></button>' : '') +
+        '<span class="play-msg" role="status"></span></div></section>';
+    }
+
     h += '<section class="block"><h2>Compare with</h2><div class="related">' + S.related(o).map(function (r) {
       return '<button type="button" class="rel-btn" data-compare="' + esc(r[0]) + '" aria-label="Compare with ' + esc(D.by[r[0]].name) + '"><span class="ipa rel-glyph">' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></button>';
     }).join('') + '</div><p class="hint">Opens the two sounds side by side.</p></section>';
@@ -537,6 +551,30 @@
         var rt = e.target.closest('[data-rate]');
         if (rt) { S.audio.settings.rate = +rt.getAttribute('data-rate'); render('#detail [data-rate="' + rt.getAttribute('data-rate') + '"]'); return; }
         if (e.target.closest('[data-loop]')) { S.audio.settings.loop = !S.audio.settings.loop; S.audio.stop(); render('#detail [data-loop]'); return; }
+        var sr = e.target.closest('[data-self-rec]');
+        if (sr) {
+          if (S.audio.isRecording()) { S.audio.stopRecording(); return; }
+          var key = compose().sym, lab = sr.querySelector('span:last-child'), msg = sr.parentNode.querySelector('.play-msg');
+          sr.classList.add('is-recording'); lab.textContent = 'Stop'; msg.textContent = 'Recording…';
+          S.audio.record(4000).then(function (r) {
+            dropTake();
+            myTake = { key: key, url: r.url };
+            if (compose().sym === key) render('#detail [data-self-ab]');
+          }, function (err) {
+            sr.classList.remove('is-recording'); lab.textContent = 'Record (up to 4 s)';
+            msg.textContent = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError') ? 'Microphone access was not allowed.'
+              : err && err.name === 'NotFoundError' ? 'No microphone was found.' : 'Recording did not work in this browser.';
+          });
+          return;
+        }
+        var sab = e.target.closest('[data-self-ab]');
+        if (sab && myTake) {
+          var cm = compose(), mdl = cm.rec || cm.base.audio, mine = { mp3: myTake.url, original: myTake.url };
+          S.withPlaying(sab, function () { return S.audio.playSequence([mdl, mine], 500); });
+          return;
+        }
+        var sp1 = e.target.closest('[data-self-play]');
+        if (sp1 && myTake) { var t1 = { mp3: myTake.url, original: myTake.url }; S.withPlaying(sp1, function () { return S.audio.playClip(t1); }); return; }
         var cmp = e.target.closest('[data-compare]');
         if (cmp) { go(compareHash(sel, cmp.getAttribute('data-compare'))); return; }
         if (e.target.closest('[data-swap]')) { go(compareHash(vs, sel)); return; }
@@ -619,6 +657,7 @@
       if (reveal) trayTab = reveal;
       else if (pro && !Object.keys(dia).length && !fromMenu) trayTab = 'pro';
       var baseChanged = sel !== lastBase, external = !fromMenu;
+      if (baseChanged) { S.audio.stopRecording(); dropTake(); }
       if (external && (symPart || q.vs || q.open)) sheetOpen = true;
       lastBase = sel;
       fromMenu = false;
