@@ -2,12 +2,14 @@
    speech voice for example words. */
 (function (S) {
   'use strict';
-  var current = null, settle = null, ctx = null;
+  var current = null, settle = null, ctx = null, seqSettle = null;
   // Playback settings for recordings: speed (pitch is preserved by the browser) and looping.
   var settings = { rate: 1, loop: false };
 
   // Stops whatever is playing and settles its promise, so buttons showing "Playing" reset.
-  function stop() {
+  // keepSequence: used between the steps of playSequence, so the sequence itself carries on.
+  function stop(keepSequence) {
+    if (seqSettle && keepSequence !== true) { var q = seqSettle; seqSettle = null; q(); }
     if (current) { current.pause(); current = null; }
     if (settle) { var f = settle; settle = null; f(); }
     if (root.speechSynthesis) root.speechSynthesis.cancel();
@@ -22,8 +24,8 @@
   }
 
   // Plays a recording described by { mp3, original }: the MP3 version first, the original file as fallback.
-  function playClip(audio) {
-    stop();
+  function playClip(audio, inSequence) {
+    stop(inSequence === true);
     var urls = [audio.mp3, audio.original];
     return new Promise(function (resolve, reject) {
       settle = resolve;
@@ -33,13 +35,32 @@
         current = a;
         a.playbackRate = settings.rate;
         a.preservesPitch = true;
-        a.loop = settings.loop;
+        a.loop = settings.loop && inSequence !== true;
         a.onended = function () { if (current === a) { current = null; settle = null; } resolve(); };
         a.onerror = function () { if (current === a) tryUrl(i + 1); };
         var p = a.play();
         if (p && p.catch) p.catch(function (e) { if (e && e.name === 'NotAllowedError') reject(e); });
       };
       tryUrl(0);
+    });
+  }
+
+  // Plays recordings one after another with a pause between them, e.g. A B A B for comparing two sounds.
+  // onStep(i) is called as each one starts. Stopping cancels the rest.
+  function playSequence(clips, gapMs, onStep) {
+    stop();
+    return new Promise(function (resolve, reject) {
+      var i = 0, cancelled = false;
+      var mine = function () { cancelled = true; resolve(); };
+      seqSettle = mine;
+      var next = function () {
+        if (cancelled) return;
+        if (i >= clips.length) { if (seqSettle === mine) seqSettle = null; if (onStep) onStep(-1); resolve(); return; }
+        if (onStep) onStep(i);
+        playClip(clips[i++], true).then(function () { if (!cancelled) setTimeout(next, gapMs); },
+          function (e) { cancelled = true; if (seqSettle === mine) seqSettle = null; reject(e); });
+      };
+      next();
     });
   }
 
@@ -123,7 +144,7 @@
   }
 
   S.audio = {
-    playSound: playSound, playClip: playClip, playSegments: playSegments, formants: formants, speak: speak,
+    playSound: playSound, playClip: playClip, playSequence: playSequence, playSegments: playSegments, formants: formants, speak: speak,
     canSpeak: function (l) { return !!voiceFor(l); }, stop: stop, settings: settings,
     isPlaying: function () { return !!settle; }
   };

@@ -80,7 +80,15 @@
       .map(function (r) {
         return { kind: 'sound', o: r.o, sym: r.o.s, title: r.o.name, sub: r.why + (XSAMPA[r.o.s] ? ' · X-SAMPA ' + XSAMPA[r.o.s] : ''), href: '#/sounds/' + encodeURIComponent(r.o.s), score: r.score };
       });
-    var out = combos.slice(0, 3).concat(sounds);
+    // Two sounds: "p vs b", "s/ʃ", "compare th and s".
+    var pairs = [], pm = /^(?:compare\s+)?(\S+)\s*(?:\s(?:vs\.?|versus|and|with)\s|\/|,)\s*(\S+)$/i.exec(q);
+    if (pm) {
+      var best = function (t) { var r = search(t).filter(function (x) { return x.kind === 'sound' && x.score >= 85; })[0]; return r && r.o; };
+      var A = best(pm[1]), B = best(pm[2]);
+      if (A && B && A !== B) pairs.push({ kind: 'compare', sym: A.s + ' · ' + B.s, title: 'Compare [' + A.s + '] and [' + B.s + ']',
+        sub: A.name + ' with ' + B.name.charAt(0).toLowerCase() + B.name.slice(1), href: '#/sounds/' + encodeURIComponent(A.s) + '?vs=' + encodeURIComponent(B.s) });
+    }
+    var out = pairs.concat(combos.slice(0, 3), sounds);
     out.push({ kind: 'action', sym: '/ /', title: 'Transcribe "' + q + '"', sub: 'English to IPA, class conventions', action: 'transcribe', text: q });
     return out;
   }
@@ -92,7 +100,7 @@
       { kind: 'action', sym: '/ /', title: 'Open Transcribe', sub: 'English to IPA', href: '#/transcribe' }
     ].concat(['ʃ', 'ŋ', 'ə', 'θ'].map(function (s) {
       var o = D.by[s];
-      return { kind: 'sound', o: o, sym: s, title: o.name, sub: 'Try searching "sh", "voiced velar", "S" or "aspirated t"', href: '#/sounds/' + encodeURIComponent(s) };
+      return { kind: 'sound', o: o, sym: s, title: o.name, sub: 'Try "sh", "voiced velar", "aspirated t" or "s vs ʃ"', href: '#/sounds/' + encodeURIComponent(s) };
     }));
   }
 

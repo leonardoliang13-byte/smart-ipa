@@ -1,10 +1,11 @@
 /* Sounds: the IPA chart on the left and the lesson on the right. Pick a sound; modify it with diacritics
    or a prosody mark from the tray inside the lesson, which explains the combination.
-   Route: #/sounds/<symbol>?d=<diacritic ids>&p=<prosody id>&open=<dia|pro> (open picks the tray tab) */
+   Route: #/sounds/<symbol>?d=<diacritic ids>&p=<prosody id>&open=<dia|pro> (open picks the tray tab)
+   Compare: #/sounds/<A>?vs=<B> puts two plain sounds side by side; chart clicks then change B. */
 (function (S) {
   'use strict';
   var esc = S.esc, D = S.sounds, DIA = S.diacritics, PRO = S.prosody;
-  var el, sel = 'p', dia = {}, pro = null, lastBase = null, fromMenu = false;
+  var el, sel = 'p', dia = {}, pro = null, vs = null, lastBase = null, fromMenu = false;
   var trayTab = 'dia', trayOpenBlocked = false;
 
   var BEFORE = { ps: 1, ss: 1, ds: 1, us: 1, gr: 1, gf: 1 };
@@ -23,8 +24,11 @@
     return '#/sounds/' + encodeURIComponent(base) + (q.length ? '?' + q.join('&') : '');
   }
   function navigate(base, d, p) {
+    go(hashFor(base, d, p));
+  }
+  function compareHash(a, b) { return '#/sounds/' + encodeURIComponent(a) + '?vs=' + encodeURIComponent(b); }
+  function go(h) {
     fromMenu = true;
-    var h = hashFor(base, d, p);
     if (location.hash !== h) location.hash = h; else render();
   }
   // The applied diacritics that actually work together on this sound, in menu order.
@@ -36,9 +40,10 @@
   // ---------- Left menu ----------
   function symBtn(s, cls) {
     var o = D.by[s];
-    return '<button type="button" class="' + cls + (s === sel ? ' is-selected' : '') + '" data-sym="' + esc(s) +
-      '" aria-label="' + esc(o.name) + '" title="' + esc(o.name) + '" aria-pressed="' + (s === sel) + '">' +
-      '<span class="ipa">' + esc(s) + '</span></button>';
+    var isB = vs && s === vs;
+    return '<button type="button" class="' + cls + (s === sel ? ' is-selected' : '') + (isB ? ' is-compare' : '') + '" data-sym="' + esc(s) +
+      '" aria-label="' + esc(o.name) + (vs ? (s === sel ? ', sound A' : isB ? ', sound B' : '') : '') + '" title="' + esc(o.name) + '" aria-pressed="' + (s === sel || !!isB) + '">' +
+      '<span class="ipa">' + esc(s) + '</span>' + (vs && (s === sel || isB) ? '<span class="ab-badge" aria-hidden="true">' + (isB ? 'B' : 'A') + '</span>' : '') + '</button>';
   }
 
   // iOS Settings-style section icon: a coloured rounded tile with a white glyph.
@@ -322,8 +327,8 @@
     }
 
     h += '<section class="block"><h2>Compare with</h2><div class="related">' + S.related(o).map(function (r) {
-      return '<button type="button" class="rel-btn" data-sym="' + esc(r[0]) + '"><span class="ipa rel-glyph">' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></button>';
-    }).join('') + '</div></section>';
+      return '<button type="button" class="rel-btn" data-compare="' + esc(r[0]) + '" aria-label="Compare with ' + esc(D.by[r[0]].name) + '"><span class="ipa rel-glyph">' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></button>';
+    }).join('') + '</div><p class="hint">Opens the two sounds side by side.</p></section>';
 
     if (a) {
       h += '<p class="credit">Recording: <a href="' + esc(a.page) + '" target="_blank" rel="noopener">' + esc(a.file) + '</a>' +
@@ -332,11 +337,85 @@
     return h;
   }
 
+  // ---------- Compare two sounds ----------
+  function rowsOf(o) { return [['Kind', o.cat]].concat(o.features); }
+  function differences(a, b) {
+    var ra = rowsOf(a), rb = rowsOf(b), labels = [];
+    ra.concat(rb).forEach(function (r) { if (labels.indexOf(r[0]) < 0) labels.push(r[0]); });
+    var get = function (rows, l) { var f = rows.filter(function (r) { return r[0] === l; })[0]; return f ? f[1] : '—'; };
+    return labels.map(function (l) { var x = get(ra, l), y = get(rb, l); return { label: l, a: x, b: y, diff: x !== y }; });
+  }
+  function diffSentence(a, b, rows) {
+    if (a.kind !== b.kind) return '[' + a.s + '] is a ' + a.kind + ' and [' + b.s + '] is a ' + b.kind + ', so they are made in quite different ways.';
+    var WORD = { Voicing: 'voicing', Place: 'place of articulation', Manner: 'manner of articulation', Height: 'tongue height', Backness: 'backness', Lips: 'lip rounding' };
+    var d = rows.filter(function (r) { return r.diff && r.label !== 'Kind'; }).map(function (r) { return WORD[r.label] || r.label.toLowerCase(); });
+    var kind = rows[0].diff ? ' Their kinds also differ: ' + a.cat.toLowerCase() + ' versus ' + b.cat.toLowerCase() + '.' : '';
+    if (!d.length) return '[' + a.s + '] and [' + b.s + '] share every feature listed on the chart.' + kind;
+    var list = d.length === 1 ? d[0] : d.slice(0, -1).join(', ') + ' and ' + d[d.length - 1];
+    return '[' + a.s + '] and [' + b.s + '] differ ' + (d.length === 1 && !kind ? 'only ' : '') + 'in ' + list + '.' + kind;
+  }
+  S.compareSounds = { differences: differences, sentence: diffSentence };
+
+  function compareDetail(a, b) {
+    var rows = differences(a, b);
+    var side = function (o, tag) {
+      return '<div class="cmp-side cmp-' + tag.toLowerCase() + '"><span class="ab-badge" aria-hidden="true">' + tag + '</span>' +
+        '<div class="glyph ipa">' + esc(o.s) + '</div><div class="cmp-name">' + esc(o.name) + '</div>' +
+        '<button type="button" class="btn-secondary small" data-play-sound="' + esc(o.s) + '">' + S.icons.play + '<span>Play ' + tag + '</span></button></div>';
+    };
+    var h = '<div class="cmp-head"><h1 class="eyebrow">Compare</h1><div class="cmp-tools">' +
+      '<button type="button" class="btn-icon" data-swap aria-label="Swap A and B" title="Swap A and B">' + S.icons.swap + '</button>' +
+      '<button type="button" class="btn-icon" data-exit-compare aria-label="Close compare" title="Close compare">' + S.icons.close + '</button></div></div>' +
+      '<div class="cmp-pair">' + side(a, 'A') + side(b, 'B') + '</div>' +
+      '<div class="hero-actions"><button type="button" class="btn-play" data-play-ab>' + S.icons.play + '<span>Play A B A B</span></button>' +
+      '<span class="play-msg" role="status"></span></div>' +
+      '<div class="playback" role="group" aria-label="Playback"><div class="segmented speed" role="group" aria-label="Speed">' +
+      [[0.5, '0.5×'], [0.75, '0.75×'], [1, '1×']].map(function (r) {
+        return '<button type="button" data-rate="' + r[0] + '" aria-pressed="' + (S.audio.settings.rate === r[0]) + '">' + r[1] + '</button>';
+      }).join('') + '</div></div>' +
+      '<p class="hint">Select any symbol in the chart to change B.</p>';
+
+    h += '<section class="block"><h2>What differs</h2><p>' + esc(diffSentence(a, b, rows)) + '</p>' +
+      '<div class="scroll-x"><table class="table cmp-table"><thead><tr><th></th><th>A <span class="ipa">[' + esc(a.s) + ']</span></th><th>B <span class="ipa">[' + esc(b.s) + ']</span></th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr' + (r.diff ? ' class="is-diff"' : '') + '><th scope="row">' + esc(r.label) + (r.diff ? ' <span class="diff-tag">differs</span>' : '') + '</th><td>' + esc(r.a) + '</td><td>' + esc(r.b) + '</td></tr>';
+      }).join('') + '</tbody></table></div></section>';
+
+    h += '<section class="block"><h2>How they are made</h2><div class="tract-card"><div class="tract-wrap">' +
+      S.tractCompareSVG(S.tractParams(a), S.tractParams(b), [a.name, b.name]) + '</div><dl class="legend cmp-legend">' +
+      '<div><dt class="eyebrow"><span class="key key-a" aria-hidden="true"></span>A [' + esc(a.s) + ']</dt><dd>Solid line, red circle</dd></div>' +
+      '<div><dt class="eyebrow"><span class="key key-b" aria-hidden="true"></span>B [' + esc(b.s) + ']</dt><dd>Dashed orange line, orange circle</dd></div>' +
+      '</dl></div><p class="hint">Where only one line shows, both sounds use the same position.</p></section>';
+
+    var words = [a, b].map(function (o, i) {
+      var ex = o.ex; if (!ex) return '';
+      var speakable = S.audio.canSpeak(ex.lang);
+      return '<div class="example"><span class="ab-badge" aria-hidden="true">' + (i ? 'B' : 'A') + '</span><div class="example-text"><div><span class="ex-word">' + esc(ex.word) +
+        '</span> <span class="ipa ex-ipa">' + esc(ex.ipa) + '</span></div><div class="hint">' + esc(ex.lang) + (ex.gloss ? ' · “' + esc(ex.gloss) + '”' : '') + '</div></div>' +
+        (speakable ? '<button type="button" class="btn-icon" data-speak="' + esc(spokenForm(ex.word)) + '" data-lang="' + esc(ex.lang) + '" aria-label="Say the word with this device’s voice">' + S.icons.speaker + '</button>' : '') +
+        '</div>';
+    }).join('');
+    if (words) h += '<section class="block"><h2>In words</h2><div class="cmp-words">' + words + '</div></section>';
+
+    h += '<div class="cmp-open"><button type="button" class="btn-secondary small" data-sym-lesson="' + esc(a.s) + '">Lesson for [' + esc(a.s) + ']</button>' +
+      '<button type="button" class="btn-secondary small" data-sym-lesson="' + esc(b.s) + '">Lesson for [' + esc(b.s) + ']</button></div>';
+    [a, b].forEach(function (o) {
+      if (o.audio) h += '<p class="credit">[' + esc(o.s) + '] recording: <a href="' + esc(o.audio.page) + '" target="_blank" rel="noopener">' + esc(o.audio.file) + '</a>' +
+        (o.audio.author ? ' by ' + esc(o.audio.author) : '') + ', ' + esc(o.audio.licence) + ', via Wikimedia Commons.</p>';
+    });
+    return h;
+  }
+
   function render(focusSel) {
     renderMenu();
-    var c = compose();
-    el.querySelector('#detail').innerHTML = detail(c);
-    document.title = c.sym + ' · ' + c.name + ' · SmartIPA';
+    if (vs) {
+      el.querySelector('#detail').innerHTML = compareDetail(D.by[sel], D.by[vs]);
+      document.title = sel + ' vs ' + vs + ' · Compare · SmartIPA';
+    } else {
+      var c = compose();
+      el.querySelector('#detail').innerHTML = detail(c);
+      document.title = c.sym + ' · ' + c.name + ' · SmartIPA';
+    }
     if (focusSel) { var f = el.querySelector(focusSel); if (f) f.focus(); }
   }
 
@@ -360,10 +439,31 @@
         var rt = e.target.closest('[data-rate]');
         if (rt) { S.audio.settings.rate = +rt.getAttribute('data-rate'); render('#detail [data-rate="' + rt.getAttribute('data-rate') + '"]'); return; }
         if (e.target.closest('[data-loop]')) { S.audio.settings.loop = !S.audio.settings.loop; S.audio.stop(); render('#detail [data-loop]'); return; }
+        var cmp = e.target.closest('[data-compare]');
+        if (cmp) { go(compareHash(sel, cmp.getAttribute('data-compare'))); return; }
+        if (e.target.closest('[data-swap]')) { go(compareHash(vs, sel)); return; }
+        if (e.target.closest('[data-exit-compare]')) { go(hashFor(sel, {}, null)); return; }
+        var lesson = e.target.closest('[data-sym-lesson]');
+        if (lesson) { go(hashFor(lesson.getAttribute('data-sym-lesson'), {}, null)); return; }
+        var ab = e.target.closest('[data-play-ab]');
+        if (ab) {
+          var A = D.by[sel], B = D.by[vs], sides = el.querySelectorAll('#detail .cmp-side');
+          var mark = function (i) { Array.prototype.forEach.call(sides, function (n, k) { n.classList.toggle('is-sounding', i >= 0 && k === i % 2); }); };
+          S.withPlaying(ab, function () {
+            return S.audio.playSequence([A.audio, B.audio, A.audio, B.audio], 450, mark).then(function () { mark(-1); }, function (err) { mark(-1); throw err; });
+          });
+          return;
+        }
         if (e.target.closest('[data-watch]')) { S.tractAnimate(el.querySelector('#detail svg.tract')); return; }
         // Playing the sound also plays the movement on the diagram.
         if (e.target.closest('#detail [data-play-sound], #detail [data-play-dia], #detail [data-play-pitch]')) S.tractAnimate(el.querySelector('#detail svg.tract'));
         var b = e.target.closest('[data-sym]');
+        if (b && vs) {
+          // In compare mode the chart picks B (picking A again swaps them).
+          var t = b.getAttribute('data-sym');
+          go(t === sel ? compareHash(vs, sel) : compareHash(sel, t));
+          return;
+        }
         if (b) {
           var s = b.getAttribute('data-sym');
           var kept = DIA.resolve(dia, D.by[s]);
@@ -409,6 +509,9 @@
       dia = {};
       (q.d || '').split(',').forEach(function (id) { if (diaById[id]) dia[id] = true; });
       pro = proById[q.p] ? q.p : null;
+      var v = q.vs ? decodeURIComponent(q.vs) : null;
+      vs = v && D.by[v] && v !== sel ? v : null;
+      if (vs) { dia = {}; pro = null; }
       var reveal = q.open === 'dia' || q.open === 'pro' ? q.open : null;
       if (reveal) trayTab = reveal;
       else if (pro && !Object.keys(dia).length && !fromMenu) trayTab = 'pro';

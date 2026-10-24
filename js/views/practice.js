@@ -1,12 +1,13 @@
 /* Practice: short drills that test what the chart teaches. Route: #/practice/<mode>
-   Modes: listen (hear a recording, pick the symbol), name (see a symbol, pick its name),
-   diagram (read the vocal tract, pick the symbol), transcribe (write an English word in IPA, class conventions).
+   Modes: listen (hear a recording, pick the symbol), pairs (hear one of two close sounds, pick which), name (see a symbol, pick its name),
+   diagram (read the vocal tract, pick the symbol), transcribe (write an English word in IPA, in the style chosen on the Transcribe page).
    A neutral tool: questions are drawn at random and nothing about past answers is kept. */
 (function (S) {
   'use strict';
   var esc = S.esc, D = S.sounds;
   var MODES = [
     ['listen', 'Listen', 'Hear a sound, pick its symbol'],
+    ['pairs', 'Pairs', 'Hear one of two close sounds, pick which'],
     ['name', 'Name it', 'See a symbol, pick its description'],
     ['diagram', 'Diagram', 'Read the vocal tract, pick the symbol'],
     ['transcribe', 'Transcribe', 'Write an English word in IPA']
@@ -19,7 +20,29 @@
     'four water yes west rat lamp think that shoe vision church jump ring house time voice road day sky cup father thought nurse letter ' +
     'mother city party little bottle button lazy music phone teacher garden window yellow rhythm').split(' ');
   // Keys for typing IPA in the Transcribe drill, in the order the class handout lists them.
-  var KEYS = 'ɑ æ ɛ ɪ i ʊ u ʌ ə ɚ ɝ ɔ aj aw ɔj ej ow ŋ ɹ ʃ ʒ tʃ dʒ θ ð ɾ j w ʔ'.split(' ');
+  // On-screen keys; the diphthong keys follow the chosen transcription style.
+  function keyList() {
+    var d = S.transcriptionStyle() === 'textbook' ? 'aɪ aʊ ɔɪ eɪ oʊ' : 'aj aw ɔj ej ow';
+    return ('ɑ æ ɛ ɪ i ʊ u ʌ ə ɚ ɝ ɔ ' + d + ' ŋ ɹ ʃ ʒ tʃ dʒ θ ð ɾ j w ʔ').split(' ');
+  }
+
+  // Contrasts that English speakers and learners often confuse, for the Pairs drill with "Sounds of English".
+  var ENGLISH_PAIRS = ('s ʃ|θ s|θ f|ð d|ð z|v b|f p|ɹ l|i ɪ|u ʊ|ɛ æ|æ ʌ|ɑ ʌ|ɪ ɛ|n ŋ|t͡ʃ ʃ|d͡ʒ ʒ|p b|t d|k ɡ|s z|ʃ ʒ|ʊ ʌ|ɔ ɑ|w v|j d͡ʒ|h ʔ')
+    .split('|').map(function (x) { return x.split(' '); });
+
+  // Pairs for the current scope: the English list, or each sound with its nearest neighbour on the chart.
+  function pairs() {
+    if (scope === 'english') return ENGLISH_PAIRS.filter(function (p) { return D.by[p[0]].audio && D.by[p[1]].audio; });
+    var list = pool(), ok = {}, out = [], seen = {};
+    list.forEach(function (o) { ok[o.s] = true; });
+    list.forEach(function (o) {
+      S.related(o).forEach(function (r) {
+        var k = [o.s, r[0]].sort().join(' ');
+        if (ok[r[0]] && !seen[k]) { seen[k] = true; out.push([o.s, r[0]]); }
+      });
+    });
+    return out;
+  }
 
   var el, mode = 'listen', scope = 'all', q = null, answered = false, loadingDict = null;
 
@@ -60,6 +83,14 @@
       q = { word: w, typed: '' };
       return;
     }
+    if (mode === 'pairs') {
+      var all = pairs(), prev = q && q.pair ? q.pair.join(' ') : '';
+      var pick = all.filter(function (p) { return p.join(' ') !== prev; });
+      var pr = pick[Math.floor(Math.random() * pick.length)];
+      var a = D.by[pr[0]], b = D.by[pr[1]];
+      q = { pair: pr, target: Math.random() < 0.5 ? a : b, options: shuffle([a, b]), picked: null };
+      return;
+    }
     var list = pool();
     var t = pickTarget(list, q && q.target ? q.target.s : null);
     var opts = shuffle([t].concat(distractors(t, list, 3)));
@@ -72,6 +103,10 @@
     if (mode === 'listen') {
       return '<div class="pr-prompt"><p class="pr-ask">Which sound is this?</p><button type="button" class="btn-play pr-big-play" data-pr-play>' +
         S.icons.play + '<span>Play the sound</span></button><span class="play-msg" role="status"></span></div>';
+    }
+    if (mode === 'pairs') {
+      return '<div class="pr-prompt"><p class="pr-ask">Which of the two did you hear: <span class="ipa">[' + esc(q.options[0].s) + ']</span> or <span class="ipa">[' + esc(q.options[1].s) + ']</span>?</p>' +
+        '<button type="button" class="btn-play pr-big-play" data-pr-play>' + S.icons.play + '<span>Play the sound</span></button><span class="play-msg" role="status"></span></div>';
     }
     if (mode === 'name') {
       return '<div class="pr-prompt"><p class="pr-ask">What is this sound called?</p><div class="glyph ipa pr-glyph">' + esc(t.s) + '</div></div>';
@@ -90,7 +125,16 @@
   }
 
   function feedbackHTML() {
-    if (!answered) return '<p class="hint pr-tip">Keys 1 to 4 answer; Enter goes to the next question.</p>';
+    if (!answered) return '<p class="hint pr-tip">' + (mode === 'pairs' ? 'Keys 1 and 2 answer' : 'Keys 1 to 4 answer') + '; Enter goes to the next question.</p>';
+    if (mode === 'pairs') {
+      var ok = q.picked === q.target.s, a = q.options[0], b = q.options[1];
+      return '<div class="pr-feedback ' + (ok ? 'is-right' : 'is-wrong') + '"><div><strong>' + (ok ? 'Correct.' : 'Not quite.') + '</strong> That was <span class="ipa">[' + esc(q.target.s) + ']</span>, the ' +
+        esc(q.target.name.toLowerCase()) + '. ' + esc(S.compareSounds.sentence(a, b, S.compareSounds.differences(a, b))) + '</div>' +
+        '<div class="pr-actions"><button type="button" class="btn-secondary" data-pr-hear-s="' + esc(a.s) + '">' + S.icons.play + '<span>[' + esc(a.s) + ']</span></button>' +
+        '<button type="button" class="btn-secondary" data-pr-hear-s="' + esc(b.s) + '">' + S.icons.play + '<span>[' + esc(b.s) + ']</span></button>' +
+        '<a class="btn-secondary" href="#/sounds/' + encodeURIComponent(a.s) + '?vs=' + encodeURIComponent(b.s) + '">Compare them</a>' +
+        '<button type="button" class="btn-play" data-next>Next</button></div></div>';
+    }
     var t = q.target, right = q.picked === t.s;
     return '<div class="pr-feedback ' + (right ? 'is-right' : 'is-wrong') + '">' +
       '<div><strong>' + (right ? 'Correct.' : 'Not quite.') + '</strong> <span class="ipa">[' + esc(t.s) + ']</span> is the ' + esc(t.name.toLowerCase()) + '.' +
@@ -117,14 +161,19 @@
   var norm = function (s) {
     return String(s).toLowerCase().replace(/[\/\[\]ˈˌ.\s'’]/g, '').replace(/͡/g, '').replace(/g/g, 'ɡ').replace(/:/g, 'ː');
   };
+  // Accepted answers: every dictionary pronunciation, in the chosen style first and then the other style.
   function answers(word) {
-    var r = S.SmartIPAWord(word);
-    return [r.ipa].concat(r.alternatives).map(function (x) { return x.replace(/[ˈˌ]/g, ''); });
+    var cur = S.transcriptionStyle(), other = cur === 'class' ? 'textbook' : 'class', out = [];
+    [cur, other].forEach(function (st) {
+      var r = S.SmartIPAWord(word, st);
+      [r.ipa].concat(r.alternatives).forEach(function (x) { x = x.replace(/[ˈˌ]/g, ''); if (out.indexOf(x) < 0) out.push(x); });
+    });
+    return out;
   }
 
   function transcribeHTML() {
     if (!window.SMARTIPA_CMUDICT_RAW) return '<p class="empty">Loading the pronunciation dictionary…</p>';
-    var keys = '<div class="pr-keys" aria-label="IPA keyboard">' + KEYS.map(function (k) {
+    var keys = '<div class="pr-keys" aria-label="IPA keyboard">' + keyList().map(function (k) {
       return '<button type="button" class="pr-k ipa" data-key="' + esc(k) + '">' + esc(k) + '</button>';
     }).join('') + '<button type="button" class="pr-k pr-k-wide" data-key="⌫" aria-label="Delete last character">⌫</button></div>';
     var fb = '';
@@ -136,7 +185,7 @@
         (ok ? '' : '<div class="hint">You wrote <span class="ipa">/' + esc(q.typed) + '/</span>.</div>') + '</div>' +
         '<div class="pr-actions"><a class="btn-secondary" href="#/transcribe">Open in Transcribe</a><button type="button" class="btn-play" data-next>Next</button></div></div>';
     }
-    return '<div class="pr-prompt"><p class="pr-ask">Transcribe this word, using the class conventions</p><div class="pr-word">' + esc(q.word) + '</div>' +
+    return '<div class="pr-prompt"><p class="pr-ask">Transcribe this word (' + (S.transcriptionStyle() === 'textbook' ? 'textbook style' : 'class conventions') + ')</p><div class="pr-word">' + esc(q.word) + '</div>' +
       (S.audio.canSpeak('English (American)') ? '<button type="button" class="btn-secondary" data-pr-say>' + S.icons.speaker + '<span>Say it</span></button>' : '') + '</div>' +
       '<label class="label" for="pr-input">Your transcription <span class="hint">(stress marks optional)</span></label>' +
       '<div class="pr-input-row"><span class="pr-slash ipa">/</span><input id="pr-input" class="ipa pr-input" autocomplete="off" spellcheck="false" value="' + esc(q.typed) + '"' + (answered ? ' disabled' : '') + '><span class="pr-slash ipa">/</span>' +
@@ -188,6 +237,7 @@
         if (e.target.closest('[data-next]')) return next();
         if (e.target.closest('[data-check]')) return check();
         if ((t = e.target.closest('[data-pr-play]'))) return S.withPlaying(t, function () { return S.audio.playSound(q.target.s); });
+        if ((t = e.target.closest('[data-pr-hear-s]'))) { var hs = t.getAttribute('data-pr-hear-s'); return S.withPlaying(t, function () { return S.audio.playSound(hs); }); }
         if ((t = e.target.closest('[data-pr-hear]'))) return S.withPlaying(t, function () { return S.audio.playSound(q.target.s); });
         if ((t = e.target.closest('[data-pr-say]'))) return S.withPlaying(t, function () { return S.audio.speak(q.word, 'English (American)'); });
         if ((t = e.target.closest('[data-key]'))) {
@@ -221,7 +271,7 @@
         });
       }
       // The Listen drill starts by playing the sound, where the browser allows it.
-      if (mode === 'listen' && !answered && q && q.target && changed) {
+      if ((mode === 'listen' || mode === 'pairs') && !answered && q && q.target && changed) {
         var b = el.querySelector('[data-pr-play]');
         if (b) S.withPlaying(b, function () { return S.audio.playSound(q.target.s); });
       }

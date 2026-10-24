@@ -8,6 +8,7 @@
  *   - optional phonetic detail (opts.phonetic): aspirated pʰ tʰ kʰ at the start of a stressed or
  *     word-initial syllable (not after s, as in "spin"), and the flap ɾ for t/d between a vowel
  *     (or r) and an unstressed vowel, as in "butter"
+ *   - opts.style "textbook" instead gives /aɪ ɔɪ aʊ eɪ oʊ/ and /ɔ/ in "thought" and "dog"
  *
  * Lookup order for each word:
  *   1. dictionary  - CMU Pronouncing Dictionary (data/cmudict.js)
@@ -107,8 +108,8 @@
         var s = stress[i];
         if (n === 'AH') return s === '0' ? 'ə' : 'ʌ';
         if (n === 'ER') return s === '0' ? 'ɚ' : 'ɝ';
-        if (n === 'AO') return names[i + 1] === 'R' ? 'ɔ' : 'ɑ';
-        return VOWELS[n] || '';
+        if (n === 'AO') return opts.style === 'textbook' || names[i + 1] === 'R' ? 'ɔ' : 'ɑ';
+        return (opts.style === 'textbook' ? TEXTBOOK[n] : null) || VOWELS[n] || '';
       }
       var c = CONSONANTS[n] || '';
       if (opts.phonetic) {
@@ -253,9 +254,19 @@
     return words;
   }
 
+  // Textbook style (e.g. Ladefoged and Johnson): /aɪ ɔɪ aʊ eɪ oʊ/, and /ɔ/ in "thought" and "dog".
+  var TEXTBOOK = { AY: 'aɪ', OY: 'ɔɪ', AW: 'aʊ', EY: 'eɪ', OW: 'oʊ' };
+  // Converts class-style output from the spelling rules and letter names. In class style the letters a, e and o
+  // only occur in these diphthongs, and ɔ only in ɔj or before r, so the replacements cannot hit anything else.
+  function restyle(ipa, style) {
+    if (style !== 'textbook') return ipa;
+    return ipa.replace(/aj/g, 'aɪ').replace(/ɔj/g, 'ɔɪ').replace(/aw/g, 'aʊ').replace(/ej/g, 'eɪ').replace(/ow/g, 'oʊ');
+  }
+
   function settings(opts) {
     opts = opts || {};
     return {
+      style: opts.style === 'textbook' ? 'textbook' : 'class',
       phonetic: !!opts.phonetic,
       stress: opts.stress !== false,
       stressMonosyllables: !!opts.stressMonosyllables,
@@ -276,9 +287,9 @@
       return { ipa: all[0], source: source, alternatives: all.slice(1) };
     }
     if (/^[A-Z]{2,6}$/.test(text)) {
-      return { ipa: text.toLowerCase().split('').map(function (c) { return LETTERS[c]; }).join(' '), source: 'spelled', alternatives: [] };
+      return { ipa: restyle(text.toLowerCase().split('').map(function (c) { return LETTERS[c]; }).join(' '), o.style), source: 'spelled', alternatives: [] };
     }
-    return { ipa: guess(word), source: 'guess', alternatives: [] };
+    return { ipa: restyle(guess(word), o.style), source: 'guess', alternatives: [] };
   }
 
   // Full text -> { ipa, tokens }. Punctuation and spacing are kept as written.

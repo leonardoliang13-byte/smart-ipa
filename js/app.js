@@ -8,7 +8,16 @@
 
   S.englishToIPA = window.SmartIPA.englishToIPA;
   // One English word in the class conventions, without stress marks (used by the Practice drill).
-  S.SmartIPAWord = function (w) { return window.SmartIPA.wordToIPA(w, { stress: false }); };
+  // Transcription style shared by Transcribe and Practice: 'class' (the class handout) or 'textbook'.
+  // Kept in the browser as a display preference.
+  var style = 'class';
+  try { if (localStorage.getItem('smartipa.style') === 'textbook') style = 'textbook'; } catch (e) {}
+  S.transcriptionStyle = function () { return style; };
+  S.setTranscriptionStyle = function (v) {
+    style = v === 'textbook' ? 'textbook' : 'class';
+    try { localStorage.setItem('smartipa.style', style); } catch (e) {}
+  };
+  S.SmartIPAWord = function (w, st) { return window.SmartIPA.wordToIPA(w, { stress: false, style: st || style }); };
 
   // Load Charis SIL with exactly the characters the app shows. Google Fonts otherwise splits the font
   // into Unicode-range pieces, and combining marks such as the tie bar (U+0361) can land in a piece the

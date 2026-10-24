@@ -218,6 +218,27 @@
     return svg + '</svg>';
   };
 
+  // Two sounds in one drawing: A in solid black with a red circle, B dashed in orange with an orange circle.
+  S.tractCompareSVG = function (PA, PB, names) {
+    var a = geometry(PA || {}), b = geometry(PB || {});
+    var ln = function (d, cls) { return '<path class="' + (cls || 'ln') + '" d="' + d + '"></path>'; };
+    // B is drawn first and A on top, so B's dashes only show where its shape differs from A's.
+    var under = function (key, cls) { return b[key] !== a[key] ? ln(b[key], (cls || 'ln') + ' cmp') : ''; };
+    var ring = function (pt, cls) { return pt ? '<ellipse class="' + cls + '" cx="' + Math.round(pt[0]) + '" cy="' + Math.round(pt[1]) + '" rx="38" ry="30"></ellipse>' : ''; };
+    var label = names ? 'Side view comparing ' + names[0] + ' (solid, red circle) with ' + names[1] + ' (dashed, orange circle)' : 'Side view comparing two sounds';
+    var svg = '<svg class="tract" viewBox="0 0 800 1000" role="img" aria-label="' + label + '">' +
+      under('lower') + under('palate') + under('teethL', 'ln fill') + under('folds', 'ln thin') +
+      ln(pathD(BASE.head)) + ln(a.lower) + ln(a.palate) + ln(pathD(BASE.larynx)) +
+      '<path class="ln fill" d="' + pathD(BASE.teethU) + '"></path>' + ln(a.teethL, 'ln fill') + ln(a.folds, 'ln thin');
+    if (a.nose) svg += ln('M 22 262 L 4 296 M 4 274 L 4 296 L 22 288', 'ln thin');
+    if (b.nose && !a.nose) svg += ln('M 22 262 L 4 296 M 4 274 L 4 296 L 22 288', 'ln thin cmp');
+    if (a.oral) svg += ln('M 70 470 L 14 470 M 32 454 L 14 470 L 32 486', 'ln thin');
+    if (b.oral && !a.oral) svg += ln('M 70 470 L 14 470 M 32 454 L 14 470 L 32 486', 'ln thin cmp');
+    var same = function (p, q) { return p && q && Math.round(p[0]) === Math.round(q[0]) && Math.round(p[1]) === Math.round(q[1]); };
+    svg += ring(a.h2, 'focus') + ring(a.hl, 'focus') + (same(b.h2, a.h2) ? '' : ring(b.h2, 'focus cmp')) + (same(b.hl, a.hl) ? '' : ring(b.hl, 'focus cmp'));
+    return svg + '</svg>';
+  };
+
   // Plays the movement of an animated drawing once, unless the viewer prefers reduced motion.
   S.tractAnimate = function (svg) {
     if (!svg || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
