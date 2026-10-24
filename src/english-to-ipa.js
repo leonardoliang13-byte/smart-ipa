@@ -72,6 +72,7 @@
   function loadCompact(raw, fmt) {
     var phones = fmt.phones.split(' '), table = {};
     for (var p = 0; p < phones.length; p++) table[fmt.alphabet.charAt(p)] = phones[p];
+    if (raw.indexOf('\r') >= 0) raw = raw.replace(/\r/g, ''); // a Windows checkout may add carriage returns
     var map = new Map(), prev = '', start = 0, n = raw.length;
     while (start < n) {
       var end = raw.indexOf('\n', start);
