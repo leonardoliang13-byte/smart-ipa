@@ -486,10 +486,15 @@
     pane.classList.toggle('is-open', open);
     el.querySelector('.sheet-backdrop').hidden = !(open && phone);
     document.body.classList.toggle('has-sheet', open && phone);
+    // While the sheet is open on a phone, everything behind it is inert, so focus and screen readers stay in the sheet.
+    var behind = [el.querySelector('.pane-main'), document.querySelector('.topbar'), document.querySelector('.tabbar'), document.querySelector('.footer')];
+    behind.forEach(function (n) { if (n) n.inert = open && phone; });
     if (phone) {
+      var wasOpen = pane.getAttribute('aria-modal') === 'true';
       pane.setAttribute('role', 'dialog'); pane.setAttribute('aria-modal', String(open));
       pane.inert = !open;
-      if (!open) {
+      if (open && !wasOpen && !pane.contains(document.activeElement)) pane.focus({ preventScroll: true });
+      if (!open && wasOpen) {
         var btn = el.querySelector('#menu [data-sym].is-selected');
         if (btn) btn.focus({ preventScroll: true });
       }
@@ -521,7 +526,7 @@
         '<button type="button" class="search search-btn" data-open-palette>' + S.icons.search + '<span>Search sounds</span><span class="kbd">Ctrl K</span></button></div>' +
         '<p class="sr-only" id="chart-help">In the chart, use the arrow keys to move between symbols and Enter to open one.</p>' +
         '<div id="menu" role="group" aria-label="IPA chart" aria-describedby="chart-help"></div></section>' +
-        '<aside class="pane-detail" id="lesson" aria-label="Lesson"><div class="sheet-bar"><span class="sheet-grabber" aria-hidden="true"></span>' +
+        '<aside class="pane-detail" id="lesson" aria-label="Lesson" tabindex="-1"><div class="sheet-bar"><span class="sheet-grabber" aria-hidden="true"></span>' +
         '<button type="button" class="btn-icon sheet-step" data-step="-1"><span aria-hidden="true">‹</span><span class="ipa"></span></button>' +
         '<span class="sheet-title"></span>' +
         '<button type="button" class="btn-icon sheet-step" data-step="1"><span class="ipa"></span><span aria-hidden="true">›</span></button>' +

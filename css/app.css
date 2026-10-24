@@ -555,3 +555,4 @@ body.has-palette { overflow: hidden; }
 [data-self-rec].is-recording .rec-dot-red { background: #FFFFFF; animation: rec-pulse 1s ease-in-out infinite; }
 @keyframes rec-pulse { 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { [data-self-rec].is-recording .rec-dot-red { animation: none; } }
+#lesson:focus { outline: none; }
