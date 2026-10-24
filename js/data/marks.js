@@ -59,16 +59,144 @@
     };
   });
 
+  // ---------- Which diacritics work where ----------
+  // Each diacritic belongs to a small family (shown as a row in the menu), states what it can attach to,
+  // and is checked against the chosen sound and the marks already applied. A diacritic that cannot apply
+  // is shown disabled with the reason, rather than producing a symbol no phonetician would write.
+  var FAMILY = {
+    vl: 'Voicing', vd: 'Voicing', br: 'Phonation', cr: 'Phonation', asp: 'Aspiration',
+    den: 'Contact point', api: 'Contact point', lam: 'Contact point', lin: 'Contact point',
+    adv: 'Forward or back', ret: 'Forward or back', rai: 'Closer or more open', low: 'Closer or more open',
+    cen: 'Toward the centre', mcen: 'Toward the centre', atr: 'Tongue root', rtr: 'Tongue root',
+    lab: 'Lips', mor: 'Lips', les: 'Lips', pal: 'Tongue body', vel: 'Tongue body', pha: 'Tongue body', vph: 'Tongue body',
+    nas: 'Nasal and r-colour', rho: 'Nasal and r-colour', nrel: 'Release', lrel: 'Release', nar: 'Release',
+    syl: 'Syllable role', nsyl: 'Syllable role'
+  };
+  var APPLIES = {
+    vl: 'Voiced sounds', vd: 'Voiceless consonants', br: 'Voiced sounds', cr: 'Voiced sounds',
+    asp: 'Voiceless stops, affricates and clicks', den: 'Alveolar and bilabial consonants',
+    api: 'Tongue-tip and blade consonants', lam: 'Tongue-tip and blade consonants', lin: 'Lip and tongue-tip consonants',
+    adv: 'Vowels and tongue consonants', ret: 'Vowels and tongue consonants',
+    rai: 'Vowels and consonants without full closure', low: 'Vowels, fricatives, approximants, trills and plosives',
+    cen: 'Front and back vowels', mcen: 'Vowels other than schwa', atr: 'Vowels', rtr: 'Vowels',
+    lab: 'Consonants', mor: 'Vowels', les: 'Vowels', pal: 'Non-palatal consonants', vel: 'Non-velar consonants',
+    pha: 'Non-pharyngeal consonants', vph: 'Consonants, typically l', nas: 'Vowels, approximants, liquids and clicks',
+    rho: 'Vowels', nrel: 'Plosives', lrel: 'Tongue-tip plosives', nar: 'Plosives',
+    syl: 'Nasals, liquids and approximants', nsyl: 'Vowels'
+  };
+  // Pairs that cannot be combined: opposites, or marks that contradict each other.
+  var CONFLICTS = [
+    ['vl', 'vd'], ['vl', 'br'], ['vl', 'cr'], ['br', 'cr'],
+    ['asp', 'vd'], ['asp', 'br'], ['asp', 'cr'], ['asp', 'nar'], ['asp', 'nrel'], ['asp', 'lrel'],
+    ['nrel', 'lrel'], ['nrel', 'nar'], ['lrel', 'nar'],
+    ['den', 'lin'], ['api', 'lam'], ['api', 'lin'], ['lam', 'lin'],
+    ['adv', 'ret'], ['rai', 'low'], ['cen', 'mcen'], ['atr', 'rtr'], ['mor', 'les'],
+    ['pal', 'vel'], ['pal', 'pha'], ['pal', 'vph'], ['vel', 'pha'], ['vel', 'vph'], ['pha', 'vph']
+  ];
+  var conflictsOf = {};
+  CONFLICTS.forEach(function (p) {
+    (conflictsOf[p[0]] = conflictsOf[p[0]] || []).push(p[1]);
+    (conflictsOf[p[1]] = conflictsOf[p[1]] || []).push(p[0]);
+  });
+  var CORONAL = { dental: 1, alveolar: 1, postalveolar: 1, retroflex: 1 };
+  var CLOSURE = { plosive: 1, nasal: 1, affricate: 1, click: 1, implosive: 1, ejective: 1 };
+  var SONORANT = { nasal: 1, 'lateral approximant': 1, approximant: 1, trill: 1, tap: 1 };
+
+  // Why diacritic `id` cannot attach to sound `b` on its own merits ('' when it can).
+  function baseReason(id, b, has) {
+    var V = b.kind === 'vowel', m = b.manner, pl = b.place;
+    var onlyV = 'Only on vowels', onlyC = 'Only on consonants';
+    switch (id) {
+      case 'vl': return !V && !b.voiced ? 'Already voiceless' : '';
+      case 'vd':
+        if (V) return 'Vowels are already voiced';
+        if (b.voiced) return 'Already voiced';
+        return pl === 'glottal' && m === 'plosive' ? 'A glottal stop holds the vocal folds shut' : '';
+      case 'br': case 'cr': return !V && !b.voiced && !has.vd ? 'Needs a voiced sound' : '';
+      case 'asp':
+        if (V) return onlyC;
+        if (b.voiced) return 'Only on voiceless consonants';
+        if (!(m === 'plosive' || m === 'affricate' || m === 'click')) return 'Only on stops, affricates and clicks';
+        return pl === 'glottal' || pl === 'epiglottal' ? 'No puff of air can follow this closure' : '';
+      case 'den':
+        if (V) return onlyC;
+        return pl === 'alveolar' || pl === 'bilabial' ? '' : 'Only on alveolar (or bilabial) consonants';
+      case 'api': case 'lam':
+        if (V) return onlyC;
+        return CORONAL[pl] || pl === 'alveolopalatal' ? '' : 'Only on tongue-tip or blade consonants';
+      case 'lin':
+        if (V) return onlyC;
+        return CORONAL[pl] || pl === 'bilabial' || pl === 'labiodental' ? '' : 'Only on lip or tongue-tip consonants';
+      case 'adv': case 'ret':
+        return !V && (pl === 'bilabial' || pl === 'labiodental' || pl === 'glottal') ? 'Lips and glottis cannot move forward or back' : '';
+      case 'rai':
+        if (V) return b.h === 0 ? 'Already as close as a vowel gets' : '';
+        return CLOSURE[m] ? 'Already a full closure' : '';
+      case 'low':
+        if (V) return b.h === 1 ? 'Already as open as a vowel gets' : '';
+        return m === 'nasal' || m === 'affricate' || m === 'click' || m === 'implosive' || m === 'ejective' ? 'Lowering would remove what defines this sound' : '';
+      case 'cen': if (!V) return onlyV; return b.b === 0.5 ? 'Already central' : '';
+      case 'mcen': if (!V) return onlyV; return b.s === 'ə' ? 'Already mid-central' : '';
+      case 'atr': case 'rtr': case 'mor': case 'les': case 'rho': case 'nsyl': return V ? '' : onlyV;
+      case 'lab':
+        if (V) return 'For vowels, use More rounded';
+        return pl === 'labialvelar' || pl === 'labialpalatal' ? 'Already made with rounded lips' : '';
+      case 'pal':
+        if (V) return onlyC;
+        return pl === 'palatal' || pl === 'alveolopalatal' || pl === 'labialpalatal' ? 'Already palatal' : '';
+      case 'vel':
+        if (V) return onlyC;
+        return pl === 'velar' || pl === 'labialvelar' ? 'Already velar' : '';
+      case 'pha':
+        if (V) return onlyC;
+        return pl === 'pharyngeal' || pl === 'epiglottal' ? 'Already pharyngeal' : '';
+      case 'vph':
+        if (V) return onlyC;
+        return pl === 'velar' || pl === 'labialvelar' || pl === 'pharyngeal' || pl === 'epiglottal' ? 'Already velar or pharyngeal' : '';
+      case 'nas':
+        if (V) return '';
+        if (m === 'nasal') return 'Already nasal';
+        return m === 'click' || pl === 'glottal' || (SONORANT[m] && m !== 'nasal') ? '' : 'Only on vowels, approximants, liquids and clicks';
+      case 'nrel': case 'lrel': case 'nar':
+        if (V) return onlyC;
+        if (m !== 'plosive') return 'Only on plosives';
+        if (pl === 'glottal' || pl === 'epiglottal') return 'This stop has no release in the mouth';
+        return id === 'lrel' && !CORONAL[pl] ? 'Needs a tongue-tip stop such as t or d' : '';
+      case 'syl':
+        if (V) return 'Vowels are already syllabic';
+        return SONORANT[m] ? '' : 'Only nasals, liquids and approximants can form a syllable';
+    }
+    return '';
+  }
+
+  var byId = {};
+  dia.forEach(function (x) { byId[x.id] = x; x.family = FAMILY[x.id]; x.applies = APPLIES[x.id]; });
+
+  // Full check: '' if `id` can be added to sound `b` given the active set `has`, otherwise the reason.
+  function reason(id, b, has) {
+    var r = baseReason(id, b, has || {});
+    if (r) return r;
+    var clash = (conflictsOf[id] || []).filter(function (o) { return has && has[o]; })[0];
+    return clash ? 'Conflicts with ' + byId[clash].name : '';
+  }
+
+  // Families, in menu order, grouped under the four headings.
+  var groups = [
+    ['A', 'Voice', 'How the vocal folds behave', ['Voicing', 'Phonation', 'Aspiration']],
+    ['B', 'Tongue position', 'Fine-tunes where the sound is made', ['Contact point', 'Forward or back', 'Closer or more open', 'Toward the centre', 'Tongue root']],
+    ['C', 'Added articulation', 'A second gesture on top of the main one', ['Lips', 'Tongue body', 'Nasal and r-colour']],
+    ['D', 'Release and syllable role', 'How the sound ends, or its role in the syllable', ['Release', 'Syllable role']]
+  ];
+
   S.diacritics = {
-    bases: bases, list: dia,
-    exclusive: [['vl', 'vd', 'br', 'cr'], ['adv', 'ret'], ['rai', 'low'], ['mor', 'les'], ['syl', 'nsyl'], ['api', 'lam'], ['pal', 'vel', 'pha', 'vph'], ['cen', 'mcen'], ['atr', 'rtr']],
-    groups: [
-      ['A', 'Voice', 'How the vocal folds behave'],
-      ['B', 'Tongue position', 'Fine-tunes where the sound is made'],
-      ['C', 'Added articulation', 'A second gesture on top of the main one'],
-      ['D', 'Release and syllable role', 'How the sound ends, or its role in the syllable']
-    ],
-    fits: function (x, base) { return x.ap === 'B' || (x.ap === 'V') === (base.kind === 'vowel'); }
+    bases: bases, list: dia, byId: byId, groups: groups,
+    reason: reason,
+    // Keep only the diacritics in `ids` that work together on sound `b`, in menu order.
+    resolve: function (ids, b) {
+      var has = {};
+      dia.forEach(function (x) { if (ids[x.id] && !reason(x.id, b, has)) has[x.id] = true; });
+      return has;
+    }
   };
 
   // ---------- Suprasegmentals and tones ----------

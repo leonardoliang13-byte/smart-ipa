@@ -31,6 +31,7 @@
 <script src="js/core.js"></script>
 <script src="js/data/sounds.js"></script>
 <script src="js/data/marks.js"></script>
+<script src="js/data/dia-audio.js"></script>
 <script src="js/tract.js"></script>
 <script src="data/cmudict.js"></script>
 <script src="src/english-to-ipa.js"></script>
@@ -68,11 +69,29 @@
     ['guess for unknown word', T('blorfing'), '/blɔɹfɪŋ/'],
     ['r is always ɹ', T('red car'), '/ɹɛd kɑɹ/'],
     ['no stress, no slashes', T('international', { stress: false, slashes: false }), 'ɪntɚnæʃənəl'],
+    ['aspiration allowed on p', S.diacritics.reason('asp', S.sounds.by.p, {}), ''],
+    ['aspiration banned on b', S.diacritics.reason('asp', S.sounds.by.b, {}), 'Only on voiceless consonants'],
+    ['aspiration banned on s', S.diacritics.reason('asp', S.sounds.by.s, {}), 'Only on stops, affricates and clicks'],
+    ['voiceless banned on p', S.diacritics.reason('vl', S.sounds.by.p, {}), 'Already voiceless'],
+    ['breathy needs voicing', S.diacritics.reason('br', S.sounds.by.t, {}), 'Needs a voiced sound'],
+    ['breathy fine once voiced', S.diacritics.reason('br', S.sounds.by.t, { vd: true }), ''],
+    ['nasalized banned on plosives', S.diacritics.reason('nas', S.sounds.by.t, {}), 'Only on vowels, approximants, liquids and clicks'],
+    ['nasalized banned on nasals', S.diacritics.reason('nas', S.sounds.by.m, {}), 'Already nasal'],
+    ['palatalized banned on palatals', S.diacritics.reason('pal', S.sounds.by.c, {}), 'Already palatal'],
+    ['opposites conflict', S.diacritics.reason('ret', S.sounds.by.k, { adv: true }), 'Conflicts with Advanced'],
+    ['syllabic only on sonorants', S.diacritics.reason('syl', S.sounds.by.t, {}), 'Only nasals, liquids and approximants can form a syllable'],
+    ['raised blocked on closed vowel', S.diacritics.reason('rai', S.sounds.by.i, {}), 'Already as close as a vowel gets'],
+    ['resolve keeps the first of two clashing marks and drops ones that cannot apply', Object.keys(S.diacritics.resolve({ asp: true, vd: true, nas: true }, S.sounds.by.p)).join(','), 'vd'],
+    ['recording for n̥', String(!!S.diacriticAudio('n', ['vl'])), 'true'],
+    ['recording for pʰ', String(!!S.diacriticAudio('p', ['asp'])), 'true'],
+    ['recording for ɔ̃', String(!!S.diacriticAudio('ɔ', ['nas'])), 'true'],
     ['121 chart sounds', String(S.sounds.all.length), '121'],
     ['every sound has a recording', String(S.sounds.all.filter(function (o) { return o.audio; }).length), '121'],
     ['every sound has an example', String(S.sounds.all.filter(function (o) { return o.ex; }).length), '121'],
     ['every sound draws a tract', String(S.sounds.all.filter(function (o) { return /^<svg[\s\S]*<\/svg>$/.test(S.tractSVG(S.tractParams(o))) && !/NaN|undefined/.test(S.tractSVG(S.tractParams(o))); }).length), '121'],
     ['31 diacritics', String(S.diacritics.list.length), '31'],
+    ['every diacritic has a family and a scope', String(S.diacritics.list.filter(function (x) { return x.family && x.applies; }).length), '31'],
+    ['every chart sound accepts at least one diacritic', String(S.sounds.all.filter(function (o) { return S.diacritics.list.some(function (x) { return !S.diacritics.reason(x.id, o, {}); }); }).length), '121'],
     ['24 prosody marks', String(S.prosody.items.length), '24']
   ];
   var pass = 0, body = document.getElementById('tests');

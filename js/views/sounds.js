@@ -27,8 +27,10 @@
     var h = hashFor(base, d, p);
     if (location.hash !== h) location.hash = h; else render();
   }
+  // The applied diacritics that actually work together on this sound, in menu order.
   function activeDia(base) {
-    return DIA.list.filter(function (x) { return dia[x.id] && DIA.fits(x, base); });
+    var has = DIA.resolve(dia, base);
+    return DIA.list.filter(function (x) { return has[x.id]; });
   }
 
   // ---------- Left menu ----------
@@ -104,17 +106,32 @@
   }
 
   function diacriticMenu() {
-    var base = D.by[sel], active = activeDia(base);
+    var base = D.by[sel], active = activeDia(base), has = {};
+    active.forEach(function (x) { has[x.id] = true; });
+    var ids = active.map(function (x) { return x.id; });
     var status = active.length ? '<span class="ipa">' + active.map(function (x) { return esc(x.glyph); }).join(' ') + '</span> ' + active.length + ' applied' : '';
+    var tile = function (x) {
+      var on = !!has[x.id];
+      // When off, would adding it work, and would the result have a real recording?
+      var why = on ? '' : DIA.reason(x.id, base, has);
+      var withIt = on ? ids : ids.concat([x.id]);
+      var recorded = !why && !!S.diacriticAudio(base.s, withIt);
+      var sub = why || (on ? 'Applied' : x.applies);
+      return '<button type="button" class="dia-tile' + (on ? ' is-selected' : '') + (why ? ' is-blocked' : '') + '" data-dia="' + x.id + '" aria-pressed="' + on + '"' +
+        (why ? ' aria-disabled="true"' : '') + ' title="' + esc(x.name + (why ? ': ' + why : ': ' + x.effect)) + '">' +
+        '<span class="ipa dia-glyph">' + esc(x.glyph) + '</span><span class="dia-text"><span class="dia-name">' + esc(x.name) +
+        (recorded ? '<span class="rec-dot" title="A recording exists for this combination">' + S.icons.speaker + '</span>' : '') +
+        '</span><span class="dia-sub">' + esc(sub) + '</span></span></button>';
+    };
     return fold('dia', 'Diacritics', 'Small marks that modify a sound, grouped by what they change', status,
-      '<p class="hint">Dimmed marks do not apply to this sound. Several can be combined.</p>' +
+      '<p class="hint">Marks that cannot apply to [' + esc(base.s) + '], or that clash with one already chosen, say why. ' +
+      S.icons.speaker + ' means that combination has a real recording.</p>' +
       DIA.groups.map(function (g) {
-        return '<div class="group"><div class="group-head"><h3>' + esc(g[1]) + '</h3><span class="hint">' + esc(g[2]) + '</span></div><div class="mark-tiles">' +
-          DIA.list.filter(function (x) { return x.grp === g[0]; }).map(function (x) {
-            var off = !DIA.fits(x, base), on = !!dia[x.id] && !off;
-            return '<button type="button" class="mark-btn' + (on ? ' is-selected' : '') + '" data-dia="' + x.id + '" aria-pressed="' + on + '"' + (off ? ' disabled' : '') + '>' +
-              '<span class="ipa mark-glyph">' + esc(x.glyph) + '</span><span class="mark-name">' + esc(x.name) + '</span></button>';
-          }).join('') + '</div></div>';
+        return '<div class="group"><div class="group-head"><h3>' + esc(g[1]) + '</h3><span class="hint">' + esc(g[2]) + '</span></div>' +
+          g[3].map(function (fam) {
+            return '<div class="dia-family"><div class="dia-family-name">' + esc(fam) + '</div><div class="dia-tiles">' +
+              DIA.list.filter(function (x) { return x.family === fam; }).map(tile).join('') + '</div></div>';
+          }).join('') + '</div>';
       }).join(''));
   }
 
@@ -142,6 +159,7 @@
     var base = D.by[sel], active = activeDia(base), has = {};
     active.forEach(function (x) { has[x.id] = true; });
     var p = pro ? proById[pro] : null;
+    var rec = S.diacriticAudio(base.s, active.map(function (x) { return x.id; }));
 
     var core = base.s + active.filter(function (x) { return !x.spacing; }).map(function (x) { return x.m; }).join('') +
       active.filter(function (x) { return x.spacing; }).map(function (x) { return x.m; }).join('');
@@ -189,7 +207,7 @@
     t.nasalized = !!has.nas;
     t.secondary = has.pal ? 'palatalized' : (has.vel || has.vph) ? 'velarized' : has.pha ? 'pharyngealized' : has.lab ? 'labialized' : 'none';
 
-    return { base: base, active: active, p: p, sym: sym, name: name, tract: t, flavoured: active.length > 0 || !!p };
+    return { base: base, active: active, p: p, sym: sym, name: name, tract: t, rec: rec, flavoured: active.length > 0 || !!p };
   }
 
   // Pitch-and-timing segments for the selected prosody mark, using the chosen sound where it makes sense.
@@ -240,9 +258,13 @@
     h += '<div class="hero"><div class="glyph ipa">' + esc(c.sym) + '</div><div class="hero-text">' +
       '<div class="eyebrow">' + esc(c.flavoured ? o.cat + ' with flavour' : o.cat) + '</div><h1>' + esc(c.name) + '</h1>' +
       '<div class="meta">' + cp + '</div><div class="hero-actions">' +
-      (p ? '<button type="button" class="btn-play" data-play-pitch>' + S.icons.play + '<span>Play pitch</span></button>' +
-        '<button type="button" class="btn-secondary" data-play-sound="' + esc(o.s) + '">' + S.icons.play + '<span>Recording</span></button>'
+      // Main play button: the pitch pattern for prosody, else the recording of this exact combination
+      // when one exists, else the plain sound. A second button offers the plain sound for comparison.
+      (p ? '<button type="button" class="btn-play" data-play-pitch>' + S.icons.play + '<span>Play pitch</span></button>'
+        : c.rec ? '<button type="button" class="btn-play" data-play-dia>' + S.icons.play + '<span>Play [' + esc(c.sym) + ']</span></button>'
         : '<button type="button" class="btn-play" data-play-sound="' + esc(o.s) + '">' + S.icons.play + '<span>Play sound</span></button>') +
+      (p && c.rec ? '<button type="button" class="btn-secondary" data-play-dia>' + S.icons.play + '<span>[' + esc(c.sym.replace(p.sym, '').trim()) + ']</span></button>' : '') +
+      (c.flavoured && (p || c.rec) ? '<button type="button" class="btn-secondary" data-play-sound="' + esc(o.s) + '">' + S.icons.play + '<span>Plain [' + esc(o.s) + ']</span></button>' : '') +
       '<span class="play-msg" role="status"></span></div></div></div>';
 
     if (c.flavoured) {
@@ -253,7 +275,10 @@
         }).join('') +
         (p ? '<button type="button" class="chip" data-remove-pro aria-label="Remove ' + esc(p.name) + '"><span class="ipa">' + esc(p.sym) + '</span>' + esc(p.name) + S.icons.close + '</button>' : '') +
         '<button type="button" class="chip chip-clear" data-clear>Clear flavour</button></div>' +
-        (c.active.length ? '<p class="hint">The recording is of plain [' + esc(o.s) + ']. Modified versions are not recorded.</p>' : '') + '</div>';
+        (c.active.length && !c.rec ? '<p class="hint">No recording of [' + esc(c.sym.replace(p ? p.sym : '', '')) + '] yet, so Play uses plain [' + esc(o.s) + '].</p>' : '') +
+        (c.rec ? '<p class="hint">Recording: <a href="' + esc(c.rec.page) + '" target="_blank" rel="noopener">' + esc(c.rec.file) + '</a>' +
+          (c.rec.author ? ' by ' + esc(c.rec.author) : '') + ', ' + esc(c.rec.licence) + ', via Wikimedia Commons' +
+          (c.rec.written && c.rec.written !== c.sym ? ' (filed there as [' + esc(c.rec.written) + '])' : '') + '.</p>' : '') + '</div>';
     }
 
     h += '<div class="features">' + o.features.map(function (f) {
@@ -267,7 +292,8 @@
 
     if (c.active.length) {
       h += '<section class="block"><h2>What the diacritics do</h2>' + c.active.map(function (x) {
-        return '<div class="explain"><div class="explain-glyph ipa">' + esc(x.glyph) + '</div><div><div class="explain-name">' + esc(x.name) + '</div>' +
+        return '<div class="explain"><div class="explain-glyph ipa">' + esc(x.glyph) + '</div><div><div class="explain-name">' + esc(x.name) +
+          ' <span class="hint">· ' + esc(x.family) + ' · used on ' + esc(x.applies.charAt(0).toLowerCase() + x.applies.slice(1)) + '</span></div>' +
           '<p>' + esc(x.effect) + '</p>' + (x.exWord ? '<div class="explain-ex"><span class="hint">' + esc(x.exLang) + '</span> <strong>' + esc(x.exWord) +
           '</strong> <span class="ipa ex-ipa">' + esc(x.exIpa) + '</span></div>' : '') + '</div></div>';
       }).join('') + '</section>';
@@ -345,22 +371,22 @@
         var b = e.target.closest('[data-sym]');
         if (b) {
           var s = b.getAttribute('data-sym');
-          var kept = {}; DIA.list.forEach(function (x) { if (dia[x.id] && DIA.fits(x, D.by[s])) kept[x.id] = true; });
+          var kept = DIA.resolve(dia, D.by[s]);
           navigate(s, kept, pro);
           if (window.matchMedia('(max-width: 899px)').matches) el.querySelector('#detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
           return;
         }
         var d = e.target.closest('[data-dia]');
         if (d) {
-          var id = d.getAttribute('data-dia'), next = Object.assign({}, dia);
-          if (next[id]) delete next[id];
-          else {
-            DIA.exclusive.forEach(function (set) { if (set.indexOf(id) >= 0) set.forEach(function (o) { delete next[o]; }); });
-            next[id] = true;
-          }
-          navigate(sel, next, pro);
+          // Blocked marks stay focusable so their reason can be read, but adding them does nothing.
+          if (d.getAttribute('aria-disabled') === 'true') return;
+          var id = d.getAttribute('data-dia'), next = DIA.resolve(dia, D.by[sel]);
+          if (next[id]) delete next[id]; else next[id] = true;
+          navigate(sel, DIA.resolve(next, D.by[sel]), pro);
           return;
         }
+        var pd = e.target.closest('[data-play-dia]');
+        if (pd) { var cc = compose(); if (cc.rec) S.withPlaying(pd, S.audio.playClip(cc.rec)); return; }
         var pr = e.target.closest('[data-pro]');
         if (pr) { var pid = pr.getAttribute('data-pro'); navigate(sel, dia, pro === pid ? null : pid); return; }
         var rd = e.target.closest('[data-remove-dia]');
@@ -377,7 +403,7 @@
       el.querySelector('#sound-search').addEventListener('input', function (e) {
         var s = find(e.target.value);
         if (s && s !== sel) {
-          var kept = {}; DIA.list.forEach(function (x) { if (dia[x.id] && DIA.fits(x, D.by[s])) kept[x.id] = true; });
+          var kept = DIA.resolve(dia, D.by[s]);
           history.replaceState(null, '', hashFor(s, kept, pro));
           window.dispatchEvent(new HashChangeEvent('hashchange'));
         }

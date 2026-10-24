@@ -16,6 +16,18 @@
         '<section class="card prose"><h2>Recordings</h2><p>Every sound recording is streamed from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a> ' +
         'and is used under the licence shown. CC BY-SA recordings remain under CC BY-SA; follow the file link for full attribution and licence terms.</p>' +
         '<div class="scroll-x"><table class="table"><thead><tr><th>IPA</th><th>Sound</th><th>File</th><th>Licence</th><th>Author</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>' +
+        '<section class="card prose"><h2>Recordings of sounds with diacritics</h2><p>When a combination built on the chart has its own recording, ' +
+        'SmartIPA plays it instead of the plain sound. These come from the files Wikipedia’s IPA articles use and from searching Wikimedia Commons. ' +
+        'Some are filed on Commons under an equivalent symbol, shown in the last column.</p>' +
+        '<div class="scroll-x"><table class="table"><thead><tr><th>Combination</th><th>File</th><th>Licence</th><th>Author</th><th>Filed as</th></tr></thead><tbody>' +
+        S.diacriticAudioList().map(function (r) {
+          var parts = r.key.split('|'), ids = parts[1].split(',');
+          var sym = parts[0] + ids.map(function (id) { var d = S.diacritics.byId[id]; return d && !d.spacing ? d.m : ''; }).join('') +
+            ids.map(function (id) { var d = S.diacritics.byId[id]; return d && d.spacing ? d.m : ''; }).join('');
+          var a = r.audio;
+          return '<tr><td class="ipa">' + esc(sym) + '</td><td><a href="' + esc(a.page) + '" target="_blank" rel="noopener">' + esc(a.file) + '</a></td><td>' +
+            esc(a.licence) + '</td><td>' + (a.author ? esc(a.author) : '<span class="hint">Named on the file page</span>') + '</td><td class="ipa">' + esc(a.written) + '</td></tr>';
+        }).join('') + '</tbody></table></div></section>' +
         '<section class="card prose"><h2>Pronunciation dictionary</h2><p>English transcription uses the <a href="https://github.com/cmusphinx/cmudict" target="_blank" rel="noopener">CMU Pronouncing Dictionary</a>, ' +
         'Copyright Carnegie Mellon University, under a BSD-style licence (<a href="data/cmudict/LICENSE">full text</a>).</p></section>' +
         '<section class="card prose"><h2>Vocal tract drawings</h2><p>The side-view drawings are adapted from ' +

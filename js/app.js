@@ -1,12 +1,14 @@
 /* App shell: hash router, shared helpers and play buttons.
-   Routes: #/sounds/<symbol>?d=...&p=...  #/transcribe  #/credits
+   Routes: #/sounds/<symbol>?d=...&p=...  #/practice/<mode>  #/transcribe  #/credits
    Older links #/diacritics and #/prosody/<id> open the matching tab of the Sounds menu. */
 (function (S) {
   'use strict';
-  var ROUTES = ['sounds', 'transcribe', 'credits'];
+  var ROUTES = ['sounds', 'practice', 'transcribe', 'credits'];
   var mounted = {}, currentView = null;
 
   S.englishToIPA = window.SmartIPA.englishToIPA;
+  // One English word in the class conventions, without stress marks (used by the Practice drill).
+  S.SmartIPAWord = function (w) { return window.SmartIPA.wordToIPA(w, { stress: false }); };
 
   // Load Charis SIL with exactly the characters the app shows. Google Fonts otherwise splits the font
   // into Unicode-range pieces, and combining marks such as the tie bar (U+0361) can land in a piece the
@@ -19,6 +21,7 @@
     S.sounds.all.forEach(function (o) { add(o.s); if (o.ex) add(o.ex.ipa); });
     S.diacritics.list.forEach(function (x) { add(x.glyph); add(x.exIpa); });
     S.diacritics.bases.forEach(function (b) { add(b.s); });
+    if (S.diacriticAudioList) S.diacriticAudioList().forEach(function (r) { add(r.audio.written); });
     S.prosody.items.forEach(function (x) {
       add(x.sym); add(x.alt);
       x.parts.forEach(function (p) { add(p[0]); });

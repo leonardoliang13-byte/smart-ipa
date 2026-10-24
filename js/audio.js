@@ -14,8 +14,13 @@
   function playSound(sym) {
     var o = S.sounds.by[sym];
     if (!o || !o.audio) return Promise.reject(new Error('No recording for ' + sym));
+    return playClip(o.audio);
+  }
+
+  // Plays a recording described by { mp3, original }: the MP3 version first, the original file as fallback.
+  function playClip(audio) {
     stop();
-    var urls = [o.audio.mp3, o.audio.original];
+    var urls = [audio.mp3, audio.original];
     return new Promise(function (resolve, reject) {
       var tryUrl = function (i) {
         if (i >= urls.length) { reject(new Error('Recording could not be loaded')); return; }
@@ -108,5 +113,5 @@
     });
   }
 
-  S.audio = { playSound: playSound, playSegments: playSegments, formants: formants, speak: speak, canSpeak: function (l) { return !!voiceFor(l); }, stop: stop };
+  S.audio = { playSound: playSound, playClip: playClip, playSegments: playSegments, formants: formants, speak: speak, canSpeak: function (l) { return !!voiceFor(l); }, stop: stop };
 })(window.SIPA = window.SIPA || {});

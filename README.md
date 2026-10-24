@@ -3,6 +3,8 @@
 A web app for learning the International Phonetic Alphabet.
 
 - **Sounds**: one page on the left showing the consonant and vowel charts, with folded Diacritics and Prosody sections underneath that open with a click, and a lesson panel on the right. Pick a sound, then add diacritics and a prosody mark as "flavour". The panel shows the composed symbol and its name, the recording, a vocal-tract diagram with the place of articulation circled, what each mark does, a playable pitch-and-timing graph for prosody, an example word and similar sounds. The URL records the whole combination, e.g. `#/sounds/a?d=nas&p=tf` is a nasalized [a] with a falling tone.
+- **Diacritics in detail**: the 31 diacritics are arranged in small families (voicing, phonation, contact point, release and so on). Each one checks the chosen sound and the marks already applied, and a mark that cannot work, such as aspiration on [b], nasalization on [t] or Advanced together with Retracted, is shown unavailable with the reason. 227 combinations have their own recordings from Wikimedia Commons (for example [n̥], [pʰ], [ɔ̃], [kʷ], [sˤ]); those are marked in the menu and played instead of the plain sound.
+- **Practice**: four drills: hear a sound and pick its symbol, name a symbol, read the vocal-tract diagram, and transcribe English words in the class conventions with an on-screen IPA keyboard. Wrong answers come back more often; progress stays in the browser.
 - **Transcribe**: type English and get an IPA transcription (General American) in the class conventions of "IPA for English" (rev. 2025-01-08): /aj/ buy, /ɔj/ boy, /aw/ how, /ej/ date, /ow/ hope, /ɑ/ dog, /ɔ/ only before r, /ɹ/ for r, /ə ɚ/ unstressed and /ʌ ɝ/ stressed. An option adds aspiration (pʰ tʰ kʰ) and flaps (ɾ). Every symbol in the result links to its sound.
 
 It is a plain static site: HTML, CSS and JavaScript with no build step and no server code.
@@ -42,10 +44,12 @@ Prosody playback is synthesized in the browser.
 | `index.html`, `css/app.css` | Page shell and styles (light and dark) |
 | `js/app.js`, `js/core.js` | Router (`#/sounds/p?d=asp&p=ps`, `#/transcribe`, `#/credits`) and shared helpers |
 | `js/data/sounds.js` | Chart symbols, names, example words and recording sources |
-| `js/data/marks.js` | Diacritics and suprasegmentals |
+| `js/data/marks.js` | Diacritics (with their compatibility rules) and suprasegmentals |
+| `js/data/dia-audio.js` | Recordings of diacritic combinations (generated from Wikimedia data) |
 | `js/tract.js` | Vocal-tract line drawing |
 | `js/audio.js` | Recordings, synthesized pitch and device speech |
 | `js/views/sounds.js` | The Sounds menu and lesson panel, including diacritics and prosody |
+| `js/views/practice.js` | Practice drills |
 | `js/views/transcribe.js`, `js/views/credits.js` | Transcribe tab and Credits page |
 | `src/english-to-ipa.js` | English to IPA function (`SmartIPA.transcribe(text)`) |
 | `data/cmudict.js` | CMU Pronouncing Dictionary as a script (about 3.6 MB, loaded only when Transcribe opens) |
