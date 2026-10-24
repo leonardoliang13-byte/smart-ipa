@@ -147,6 +147,7 @@
   // ---------- Transcribe drill ----------
   function loadDictionary() {
     if (window.SMARTIPA_CMUDICT_RAW) return Promise.resolve();
+    if (S.loadDictionary) return S.loadDictionary();
     if (!loadingDict) {
       loadingDict = new Promise(function (resolve, reject) {
         var s = document.createElement('script');

@@ -152,15 +152,24 @@
     }).join('') + (p ? '<button type="button" class="chip" data-remove-pro aria-label="Remove ' + esc(p.name) + '"><span class="ipa">' + esc(p.sym) + '</span>' + esc(p.name) + S.icons.close + '</button>' : '');
     return '<section class="tray" aria-label="Modify this sound"><div class="tray-head"><h2>Modify</h2>' +
       '<div class="segmented tray-tabs" role="tablist" aria-label="Kind of mark">' +
-      '<button type="button" role="tab" data-tray="dia" aria-selected="' + (trayTab === 'dia') + '" aria-pressed="' + (trayTab === 'dia') + '">Diacritics' + (nDia ? ' · ' + nDia : '') + '</button>' +
-      '<button type="button" role="tab" data-tray="pro" aria-selected="' + (trayTab === 'pro') + '" aria-pressed="' + (trayTab === 'pro') + '">Prosody' + (p ? ' · 1' : '') + '</button></div></div>' +
+      '<button type="button" role="tab" id="tray-tab-dia" aria-controls="tray-panel" tabindex="' + (trayTab === 'dia' ? 0 : -1) + '" data-tray="dia" aria-selected="' + (trayTab === 'dia') + '">Diacritics' + (nDia ? ' · ' + nDia : '') + '</button>' +
+      '<button type="button" role="tab" id="tray-tab-pro" aria-controls="tray-panel" tabindex="' + (trayTab === 'pro' ? 0 : -1) + '" data-tray="pro" aria-selected="' + (trayTab === 'pro') + '">Prosody' + (p ? ' · 1' : '') + '</button></div></div>' +
       (c.flavoured ? '<div class="chips tray-applied">' + applied + '<button type="button" class="chip chip-clear" data-clear>Clear all</button></div>' : '') +
-      '<div class="tray-body" role="tabpanel">' + (trayTab === 'dia' ? diacriticTray(c) : prosodyTray()) + '</div></section>';
+      '<div class="tray-body" role="tabpanel" id="tray-panel" aria-labelledby="tray-tab-' + trayTab + '">' + (trayTab === 'dia' ? diacriticTray(c) : prosodyTray()) + '</div></section>';
   }
 
   // Arrow keys move between chart symbols by position on screen: the nearest symbol in that direction,
   // preferring ones in line with the current one. Home and End go to the first and last symbol.
+  function trayKey(e) {
+    var tab = e.target.closest && e.target.closest('[role="tab"][data-tray]');
+    if (!tab || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return false;
+    e.preventDefault();
+    trayTab = trayTab === 'dia' ? 'pro' : 'dia';
+    render('#detail [data-tray="' + trayTab + '"]');
+    return true;
+  }
   function chartKey(e) {
+    if (trayKey(e)) return;
     var cur = e.target.closest && e.target.closest('#menu [data-sym]');
     if (!cur) return;
     var all = Array.prototype.slice.call(el.querySelectorAll('#menu [data-sym]'));

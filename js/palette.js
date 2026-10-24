@@ -88,8 +88,20 @@
       if (A && B && A !== B) pairs.push({ kind: 'compare', sym: A.s + ' · ' + B.s, title: 'Compare [' + A.s + '] and [' + B.s + ']',
         sub: A.name + ' with ' + B.name.charAt(0).toLowerCase() + B.name.slice(1), href: '#/sounds/' + encodeURIComponent(A.s) + '?vs=' + encodeURIComponent(B.s) });
     }
-    var out = pairs.concat(combos.slice(0, 3), sounds);
-    out.push({ kind: 'action', sym: '/ /', title: 'Transcribe "' + q + '"', sub: 'English to IPA, class conventions', action: 'transcribe', text: q });
+    // An English word: its transcription, when the pronunciation dictionary has been loaded.
+    var word = [];
+    if (/^[a-z][a-z']*$/i.test(q) && window.SMARTIPA_CMUDICT_RAW && window.SmartIPA) {
+      var wr = window.SmartIPA.wordToIPA(q, { stress: true, style: S.transcriptionStyle ? S.transcriptionStyle() : 'class' });
+      if (wr.source === 'dictionary' || wr.source === 'derived') {
+        var syms = Array.from(wr.ipa.replace(/[ˈˌ]/g, '')).filter(function (c, i, a) { return D.by[c] && a.indexOf(c) === i; });
+        word.push({ kind: 'word', sym: '/' + wr.ipa + '/', title: '“' + q + '” in IPA', sub: syms.map(function (c) { return c + ' ' + D.by[c].name.toLowerCase(); }).join(' · '),
+          action: 'transcribe', text: q });
+      }
+    }
+    // A symbol, X-SAMPA or spelling match ("S", "sh") stays first; the word reading follows the sounds.
+    var strong = sounds.length && sounds[0].score >= 85;
+    var out = strong ? pairs.concat(combos.slice(0, 3), sounds, word) : pairs.concat(word, combos.slice(0, 3), sounds);
+    out.push({ kind: 'action', sym: '/ /', title: 'Transcribe "' + q + '"', sub: 'Open in English to IPA', action: 'transcribe', text: q });
     return out;
   }
 
@@ -119,7 +131,14 @@
     document.body.appendChild(box);
     input = box.querySelector('#palette-q');
     list = box.querySelector('#palette-list');
-    input.addEventListener('input', function () { results = search(input.value); active = 0; draw(); });
+    input.addEventListener('input', function () {
+      var v = input.value;
+      results = search(v); active = 0; draw();
+      // A word of three or more letters: load the dictionary (once) so the word's transcription can be shown.
+      if (/^[a-z][a-z']{2,}$/i.test(v.trim()) && !window.SMARTIPA_CMUDICT_RAW && S.loadDictionary) {
+        S.loadDictionary().then(function () { if (!box.hidden && input.value === v) { results = search(v); active = 0; draw(); } }, function () {});
+      }
+    });
     input.addEventListener('keydown', function (e) {
       if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(results.length - 1, active + 1); draw(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(0, active - 1); draw(); }
@@ -137,7 +156,7 @@
   function draw() {
     list.innerHTML = results.map(function (r, i) {
       return '<li id="pal-' + i + '" role="option" data-i="' + i + '" aria-selected="' + (i === active) + '" class="pal-item' + (i === active ? ' is-active' : '') + '">' +
-        '<span class="pal-g' + (r.kind === 'action' ? ' is-action' : ' ipa') + '">' + esc(r.sym) + '</span>' +
+        '<span class="pal-g' + (r.kind === 'action' ? ' is-action' : r.kind === 'word' ? ' ipa is-word' : ' ipa') + '">' + esc(r.sym) + '</span>' +
         '<span class="pal-t"><span class="pal-title">' + esc(r.title) + '</span><span class="pal-sub">' + esc(r.sub || '') + '</span></span>' +
         (i === active ? '<span class="kbd">Enter</span>' : '') + '</li>';
     }).join('');

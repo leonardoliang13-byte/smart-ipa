@@ -83,7 +83,7 @@ p { margin: 0; }
 .segmented { display: flex; gap: 2px; padding: 2px; background: var(--fill-strong); border-radius: 10px; }
 .segmented > a, .segmented > button { min-height: 36px; display: flex; align-items: center; padding: 0 16px; border: 0; border-radius: 8px; background: transparent;
   font-size: var(--t-footnote); font-weight: 500; color: var(--text); text-decoration: none; white-space: nowrap; }
-.segmented > [aria-current="page"], .segmented > [aria-pressed="true"] { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14); font-weight: 600; }
+.segmented > [aria-current="page"], .segmented > [aria-pressed="true"], .segmented > [aria-selected="true"] { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14); font-weight: 600; }
 .nav { overflow-x: auto; max-width: 100%; }
 
 /* Layout */
@@ -400,6 +400,7 @@ select { min-height: 32px; padding: 4px 8px; border-radius: 8px; border: 1px sol
 .pal-item.is-active { background: var(--tint); }
 .pal-g { flex: none; min-width: 38px; height: 38px; padding: 0 4px; border-radius: 10px; background: var(--fill); display: flex; align-items: center; justify-content: center; font-size: 21px; }
 .pal-g.is-action { font-size: var(--t-footnote); font-weight: 700; color: var(--muted); }
+.pal-g.is-word { font-size: 17px; padding: 0 10px; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pal-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pal-title { font-size: 14px; font-weight: 500; }
 .pal-sub { font-size: var(--t-caption); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

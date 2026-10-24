@@ -116,6 +116,7 @@
     ['compare drawing marks B where it differs', String((S.tractCompareSVG(S.tractParams(S.sounds.by.p), S.tractParams(S.sounds.by.b)).match(/ cmp"/g) || []).length > 0), 'true'],
     ['compare drawing of a sound with itself has no B lines', String((S.tractCompareSVG(S.tractParams(S.sounds.by.p), S.tractParams(S.sounds.by.p)).match(/ cmp"/g) || []).length), '0'],
     ['search: "p vs b" offers a comparison', S.palette.search('p vs b')[0].href, '#/sounds/p?vs=b'],
+    ['search: an English word shows its IPA', S.palette.search('ship')[0].sym, '/ʃɪp/'],
     ['search always offers Transcribe', S.palette.search('zzzq').slice(-1)[0].action, 'transcribe']
   ];
   var pass = 0, body = document.getElementById('tests');
