@@ -88,8 +88,9 @@ p { margin: 0; }
 #views { flex: 1; }
 .split { display: flex; flex-wrap: wrap; align-items: flex-start; }
 .pane-main { flex: 3 1 620px; min-width: 0; padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
-.pane-detail { flex: 2 1 380px; min-width: 0; align-self: stretch; padding: 28px 28px 36px; background: var(--card); border-left: 1px solid var(--line);
-  display: flex; flex-direction: column; gap: 22px; }
+.pane-detail { flex: 2 1 380px; min-width: 0; align-self: stretch; padding: 28px 28px 36px; background: var(--card); border-left: 1px solid var(--line); }
+.detail-body { display: flex; flex-direction: column; gap: 22px; }
+.sheet-bar, .tabbar { display: none; }
 /* Keep proportions on very wide screens: cap the content width and give the lesson panel a steady width. */
 .split { width: 100%; max-width: 1840px; margin: 0 auto; }
 @media (min-width: 1880px) {
@@ -513,3 +514,33 @@ body.has-palette { overflow: hidden; }
 .alt-pick { min-height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--fill); color: var(--text); font-size: 16px; }
 .alt-pick:hover { background: var(--fill-strong); }
 .alt-pick[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+/* Phones: a tab bar at the bottom, and the lesson as a sheet that slides up over the chart. */
+@media (hover: none) { .kbd { display: none; } }
+@media (max-width: 699px) {
+  body { padding-bottom: calc(58px + env(safe-area-inset-bottom)); }
+  .topbar .nav { display: none; }
+  .topbar .brand { flex-basis: auto; }
+  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; height: calc(58px + env(safe-area-inset-bottom)); padding: 0 4px env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--card) 88%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-top: 1px solid var(--line); }
+  .tabbar > a, .tabbar > button { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; background: transparent;
+    color: var(--muted); font-size: 10.5px; font-weight: 500; text-decoration: none; }
+  .tabbar .icon { width: 24px; height: 24px; stroke-width: 1.6; }
+  .tabbar [aria-current="page"] { color: var(--accent); }
+  .toolbar .search-btn { display: none; }
+
+  .pane-detail { position: fixed; left: 0; right: 0; bottom: 0; top: max(44px, env(safe-area-inset-top)); z-index: 30; border: 0; border-radius: 16px 16px 0 0;
+    padding: 0 16px calc(32px + env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.22);
+    transform: translateY(105%); visibility: hidden; transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 0.3s; }
+  .pane-detail.is-open { transform: none; visibility: visible; transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s; }
+  .sheet-bar { display: flex; position: sticky; top: 0; z-index: 2; align-items: center; gap: 6px; margin: 0 -16px 6px; padding: 16px 12px 10px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .sheet-grabber { position: absolute; top: 6px; left: 50%; width: 36px; height: 5px; margin-left: -18px; border-radius: 3px; background: var(--fill-strong); }
+  .sheet-title { flex: 1; min-width: 0; text-align: center; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet-step { width: auto; min-width: 44px; padding: 0 12px; gap: 4px; font-size: 18px; }
+  .sheet-step[hidden] { display: none; }
+  .sheet-backdrop { position: fixed; inset: 0; z-index: 25; background: rgba(0, 0, 0, 0.32); }
+  body.has-sheet { overflow: hidden; }
+}
+@media (max-width: 699px) and (prefers-reduced-motion: reduce) { .pane-detail, .pane-detail.is-open { transition: none; } }
+.offline-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 4px 18px; }

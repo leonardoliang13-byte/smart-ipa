@@ -1,7 +1,35 @@
-/* Credits: licences and attribution for recordings, dictionary and font. Route: #/credits */
+/* Credits: licences and attribution for recordings, dictionary and font, and offline use.
+   Route: #/credits, or #/credits/offline to jump to the offline section. */
 (function (S) {
   'use strict';
   var esc = S.esc;
+
+  function refresh() {
+    var st = document.getElementById('offline-status'), save = document.querySelector('[data-offline-save]'), rm = document.querySelector('[data-offline-remove]');
+    if (!st) return;
+    if (!S.offline.supported) { st.textContent = 'This browser cannot keep an offline copy (it needs a web address starting with http or https).'; save.hidden = true; return; }
+    S.offline.status().then(function (r) {
+      st.textContent = r.saved ? r.saved + ' of ' + r.total + ' recordings are saved in this browser.' : 'No recordings are saved yet. There are ' + r.total + ', about 8 MB in all.';
+      save.textContent = r.saved && r.saved < r.total ? 'Save the remaining recordings' : 'Save recordings for offline';
+      save.hidden = r.saved === r.total;
+      rm.hidden = !r.saved;
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-offline-save]');
+    if (b) {
+      var st = document.getElementById('offline-status');
+      b.disabled = true;
+      S.offline.save(function (done, total) { st.textContent = 'Saving ' + done + ' of ' + total + '…'; }).then(function (r) {
+        b.disabled = false;
+        refresh();
+        if (r.failed) setTimeout(function () { st.textContent += ' ' + r.failed + ' could not be downloaded; try again later.'; }, 50);
+      }, function () { b.disabled = false; st.textContent = 'Saving failed. The browser may be out of storage space.'; });
+      return;
+    }
+    if (e.target.closest('[data-offline-remove]')) S.offline.remove().then(refresh);
+  });
 
   S.views.credits = {
     title: 'Credits',
@@ -13,6 +41,12 @@
       }).join('');
       root.innerHTML = '<div class="narrow"><div class="page-head"><h1>Credits</h1>' +
         '<p class="hint">SmartIPA is built on freely licensed material. Thank you to everyone below.</p></div>' +
+        '<section class="card prose" id="offline"><h2>Use offline</h2><p>Once a page has been opened, SmartIPA keeps a copy of its own files, so the chart, lessons, ' +
+        'drawings and Practice keep working without a connection. Transcribe also works offline after it has been opened once. ' +
+        'Recordings come from Wikimedia Commons and are only saved if you ask.</p>' +
+        '<div class="offline-row"><button type="button" class="btn-play" data-offline-save>Save recordings for offline</button>' +
+        '<button type="button" class="btn-secondary" data-offline-remove hidden>Remove saved recordings</button></div>' +
+        '<p class="hint" id="offline-status" role="status"></p></section>' +
         '<section class="card prose"><h2>Recordings</h2><p>Every sound recording is streamed from <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a> ' +
         'and is used under the licence shown. CC BY-SA recordings remain under CC BY-SA; follow the file link for full attribution and licence terms.</p>' +
         '<div class="scroll-x"><table class="table"><thead><tr><th>IPA</th><th>Sound</th><th>File</th><th>Licence</th><th>Author</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>' +
@@ -42,6 +76,10 @@
         '<section class="card prose"><h2>Synthesized and device audio</h2><p>Pitch and timing examples on the Prosody tab are synthesized in the browser. ' +
         'Example words and the Transcribe tab use your device’s own text-to-speech voice where one is available, so they sound different on each device.</p></section></div>';
     },
-    update: function () { document.title = 'Credits · SmartIPA'; }
+    update: function (param) {
+      document.title = 'Credits · SmartIPA';
+      refresh();
+      if (param === 'offline') { var o = document.getElementById('offline'); if (o) o.scrollIntoView({ block: 'start' }); }
+    }
   };
 })(window.SIPA = window.SIPA || {});

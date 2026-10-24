@@ -67,8 +67,36 @@
     return map.size;
   }
 
+  // Reads the compact form written by tools/build-cmudict.js: each line is a digit (letters shared with the
+  // previous word), the rest of the word, a space, and pronunciations separated by "|", one character per phone.
+  function loadCompact(raw, fmt) {
+    var phones = fmt.phones.split(' '), table = {};
+    for (var p = 0; p < phones.length; p++) table[fmt.alphabet.charAt(p)] = phones[p];
+    var map = new Map(), prev = '', start = 0, n = raw.length;
+    while (start < n) {
+      var end = raw.indexOf('\n', start);
+      if (end < 0) end = n;
+      var sp = raw.indexOf(' ', start);
+      var word = prev.slice(0, raw.charCodeAt(start) - 48) + raw.slice(start + 1, sp);
+      var prons = raw.slice(sp + 1, end).split('|');
+      for (var i = 0; i < prons.length; i++) {
+        var codes = prons[i], parts = new Array(codes.length);
+        for (var j = 0; j < codes.length; j++) parts[j] = table[codes.charAt(j)];
+        prons[i] = parts.join(' ');
+      }
+      map.set(word, prons);
+      prev = word;
+      start = end + 1;
+    }
+    dict = map;
+    return map.size;
+  }
+
   function getDict() {
-    if (!dict && root.SMARTIPA_CMUDICT_RAW) loadDictionary(root.SMARTIPA_CMUDICT_RAW);
+    if (!dict && root.SMARTIPA_CMUDICT_RAW) {
+      if (root.SMARTIPA_CMUDICT_FORMAT) loadCompact(root.SMARTIPA_CMUDICT_RAW, root.SMARTIPA_CMUDICT_FORMAT);
+      else loadDictionary(root.SMARTIPA_CMUDICT_RAW);
+    }
     return dict;
   }
 

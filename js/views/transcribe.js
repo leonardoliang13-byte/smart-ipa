@@ -19,7 +19,7 @@
     textbook: { name: 'Textbook', hint: 'General American in the common textbook style: /aɪ/ buy, /ɔɪ/ boy, /aʊ/ how, /eɪ/ date, /oʊ/ hope, /ɔ/ in thought and dog, and /ɹ/ for r.' }
   };
 
-  // The dictionary is about 3.6 MB, so it loads only when this tab is first opened.
+  // The dictionary is about 1.6 MB (0.7 MB compressed), so it loads only when this tab is first opened.
   function loadDictionary() {
     if (window.SMARTIPA_CMUDICT_RAW) return Promise.resolve();
     if (!loading) {

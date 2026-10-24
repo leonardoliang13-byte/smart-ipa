@@ -74,6 +74,7 @@
     else param = parts[1] ? decodeURIComponent(parts.slice(1).join('/')) : '';
     var view = S.views[name];
     ROUTES.forEach(function (r) { document.getElementById('view-' + r).hidden = r !== name; });
+    if (name !== 'sounds') document.body.classList.remove('has-sheet');
     if (!mounted[name]) { view.mount(document.getElementById('view-' + name)); mounted[name] = true; }
     view.update(param);
     if (currentView && currentView !== name) window.scrollTo(0, 0);

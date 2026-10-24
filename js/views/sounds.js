@@ -7,6 +7,9 @@
   var esc = S.esc, D = S.sounds, DIA = S.diacritics, PRO = S.prosody;
   var el, sel = 'p', dia = {}, pro = null, vs = null, lastBase = null, fromMenu = false;
   var trayTab = 'dia', trayOpenBlocked = false;
+  // On phones the lesson is a sheet that slides up over the chart.
+  var sheetOpen = false, touch = null;
+  var isPhone = function () { return window.matchMedia('(max-width: 699px)').matches; };
 
   var BEFORE = { ps: 1, ss: 1, ds: 1, us: 1, gr: 1, gf: 1 };
   var BETWEEN = { sb: '.', mn: ' | ', mj: ' ‖ ', lk: '‿' };
@@ -41,7 +44,7 @@
   function symBtn(s, cls) {
     var o = D.by[s];
     var isB = vs && s === vs;
-    return '<button type="button" class="' + cls + (s === sel ? ' is-selected' : '') + (isB ? ' is-compare' : '') + '" data-sym="' + esc(s) +
+    return '<button type="button" class="' + cls + (s === sel ? ' is-selected' : '') + (isB ? ' is-compare' : '') + '" data-sym="' + esc(s) + '" tabindex="' + (s === sel ? 0 : -1) +
       '" aria-label="' + esc(o.name) + (vs ? (s === sel ? ', sound A' : isB ? ', sound B' : '') : '') + '" title="' + esc(o.name) + '" aria-pressed="' + (s === sel || !!isB) + '">' +
       '<span class="ipa">' + esc(s) + '</span>' + (vs && (s === sel || isB) ? '<span class="ab-badge" aria-hidden="true">' + (isB ? 'B' : 'A') + '</span>' : '') + '</button>';
   }
@@ -67,8 +70,11 @@
     h += '</div></div></section>';
     var listGroup = function (title, syms) {
       return '<div class="np-group"><h3 class="eyebrow">' + esc(title) + '</h3>' + syms.map(function (s) {
-        return '<button type="button" class="row-btn' + (s === sel ? ' is-selected' : '') + '" data-sym="' + esc(s) + '" aria-pressed="' + (s === sel) + '">' +
-          '<span class="ipa">' + esc(s) + '</span><span class="row-sub">' + esc(D.by[s].short) + '</span></button>';
+        var isB = vs && s === vs;
+        return '<button type="button" class="row-btn' + (s === sel ? ' is-selected' : '') + (isB ? ' is-compare' : '') + '" data-sym="' + esc(s) + '" tabindex="' + (s === sel ? 0 : -1) +
+          '" aria-label="' + esc(D.by[s].name) + (vs ? (s === sel ? ', sound A' : isB ? ', sound B' : '') : '') + '" aria-pressed="' + (s === sel || !!isB) + '">' +
+          '<span class="ipa">' + esc(s) + '</span><span class="row-sub">' + esc(D.by[s].short) + '</span>' +
+          (vs && (s === sel || isB) ? '<span class="ab-badge" aria-hidden="true">' + (isB ? 'B' : 'A') + '</span>' : '') + '</button>';
       }).join('') + '</div>';
     };
     // Second row: the vowel chart on the left, filling the row's height; non-pulmonic consonants and
@@ -147,6 +153,35 @@
       '<button type="button" role="tab" data-tray="pro" aria-selected="' + (trayTab === 'pro') + '" aria-pressed="' + (trayTab === 'pro') + '">Prosody' + (p ? ' · 1' : '') + '</button></div></div>' +
       (c.flavoured ? '<div class="chips tray-applied">' + applied + '<button type="button" class="chip chip-clear" data-clear>Clear all</button></div>' : '') +
       '<div class="tray-body" role="tabpanel">' + (trayTab === 'dia' ? diacriticTray(c) : prosodyTray()) + '</div></section>';
+  }
+
+  // Arrow keys move between chart symbols by position on screen: the nearest symbol in that direction,
+  // preferring ones in line with the current one. Home and End go to the first and last symbol.
+  function chartKey(e) {
+    var cur = e.target.closest && e.target.closest('#menu [data-sym]');
+    if (!cur) return;
+    var all = Array.prototype.slice.call(el.querySelectorAll('#menu [data-sym]'));
+    var target = null;
+    if (e.key === 'Home') target = all[0];
+    else if (e.key === 'End') target = all[all.length - 1];
+    else {
+      var dir = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+      if (!dir) return;
+      var r = cur.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, best = Infinity;
+      all.forEach(function (b) {
+        if (b === cur) return;
+        var q = b.getBoundingClientRect(), x = q.left + q.width / 2 - cx, y = q.top + q.height / 2 - cy;
+        var along = x * dir[0] + y * dir[1], across = Math.abs(x * dir[1] - y * dir[0]);
+        if (along <= 4) return;
+        var score = along + across * 3;
+        if (score < best) { best = score; target = b; }
+      });
+    }
+    if (!target) return;
+    e.preventDefault();
+    all.forEach(function (b) { b.tabIndex = b === target ? 0 : -1; });
+    target.focus();
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   function renderMenu() {
@@ -406,6 +441,40 @@
     return h;
   }
 
+  // Previous and next sound in chart order, for the phone sheet.
+  function neighbour(step) {
+    var i = D.all.indexOf(D.by[sel]);
+    return D.all[(i + step + D.all.length) % D.all.length];
+  }
+  function sheetBar() {
+    var bar = el.querySelector('.sheet-bar');
+    var prev = neighbour(-1), next = neighbour(1);
+    bar.querySelector('.sheet-title').textContent = vs ? 'Compare [' + sel + '] and [' + vs + ']' : 'Lesson';
+    var bp = bar.querySelector('[data-step="-1"]'), bn = bar.querySelector('[data-step="1"]');
+    bp.hidden = bn.hidden = !!vs;
+    bp.setAttribute('aria-label', 'Previous sound: ' + prev.name);
+    bn.setAttribute('aria-label', 'Next sound: ' + next.name);
+    bp.querySelector('.ipa').textContent = prev.s;
+    bn.querySelector('.ipa').textContent = next.s;
+  }
+  function setSheet(open) {
+    sheetOpen = open;
+    var pane = el.querySelector('#lesson'), phone = isPhone();
+    pane.classList.toggle('is-open', open);
+    el.querySelector('.sheet-backdrop').hidden = !(open && phone);
+    document.body.classList.toggle('has-sheet', open && phone);
+    if (phone) {
+      pane.setAttribute('role', 'dialog'); pane.setAttribute('aria-modal', String(open));
+      pane.inert = !open;
+      if (!open) {
+        var btn = el.querySelector('#menu [data-sym].is-selected');
+        if (btn) btn.focus({ preventScroll: true });
+      }
+    } else {
+      pane.removeAttribute('role'); pane.removeAttribute('aria-modal'); pane.inert = false;
+    }
+  }
+
   function render(focusSel) {
     renderMenu();
     if (vs) {
@@ -416,6 +485,7 @@
       el.querySelector('#detail').innerHTML = detail(c);
       document.title = c.sym + ' · ' + c.name + ' · SmartIPA';
     }
+    sheetBar();
     if (focusSel) { var f = el.querySelector(focusSel); if (f) f.focus(); }
   }
 
@@ -426,13 +496,41 @@
       el.innerHTML = '<div class="split"><section class="pane-main" aria-label="IPA chart">' +
         '<div class="toolbar"><div class="toolbar-title"><h1 class="page-title">IPA chart</h1></div>' +
         '<button type="button" class="search search-btn" data-open-palette>' + S.icons.search + '<span>Search sounds</span><span class="kbd">Ctrl K</span></button></div>' +
-        '<div id="menu"></div></section><aside class="pane-detail" id="detail" aria-label="Lesson" aria-live="polite"></aside></div>';
+        '<p class="sr-only" id="chart-help">In the chart, use the arrow keys to move between symbols and Enter to open one.</p>' +
+        '<div id="menu" role="group" aria-label="IPA chart" aria-describedby="chart-help"></div></section>' +
+        '<aside class="pane-detail" id="lesson" aria-label="Lesson"><div class="sheet-bar"><span class="sheet-grabber" aria-hidden="true"></span>' +
+        '<button type="button" class="btn-icon sheet-step" data-step="-1"><span aria-hidden="true">‹</span><span class="ipa"></span></button>' +
+        '<span class="sheet-title"></span>' +
+        '<button type="button" class="btn-icon sheet-step" data-step="1"><span class="ipa"></span><span aria-hidden="true">›</span></button>' +
+        '<button type="button" class="btn-icon" data-close-sheet aria-label="Close the lesson">' + S.icons.close + '</button></div>' +
+        '<div id="detail" class="detail-body" aria-live="polite"></div></aside></div>' +
+        '<div class="sheet-backdrop" data-close-sheet hidden></div>';
+
+      // Phone sheet: Escape or a swipe down on its bar closes it; a sideways swipe moves to the next sound.
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && sheetOpen && isPhone() && !el.hidden && !document.body.classList.contains('has-palette')) setSheet(false);
+      });
+      var lesson = el.querySelector('#lesson');
+      lesson.addEventListener('touchstart', function (e) {
+        var t = e.touches[0];
+        touch = { x: t.clientX, y: t.clientY, bar: !!e.target.closest('.sheet-bar'), scrolled: lesson.scrollTop > 0 };
+      }, { passive: true });
+      lesson.addEventListener('touchend', function (e) {
+        if (!touch || !isPhone()) return;
+        var t = e.changedTouches[0], dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+        var onControl = e.target.closest('input, textarea, .scroll-x, .segmented');
+        if ((touch.bar || !touch.scrolled) && dy > 90 && Math.abs(dx) < 60) setSheet(false);
+        else if (!vs && !onControl && Math.abs(dx) > 70 && Math.abs(dy) < 40) navigate(neighbour(dx < 0 ? 1 : -1).s, {}, null);
+        touch = null;
+      }, { passive: true });
+      window.matchMedia('(max-width: 699px)').addEventListener('change', function () { setSheet(sheetOpen); });
 
       // Remember whether the "Not available" list in the tray is open across redraws.
       el.addEventListener('toggle', function (e) {
         if (e.target.classList && e.target.classList.contains('mod-blocked')) trayOpenBlocked = e.target.open;
       }, true);
 
+      el.addEventListener('keydown', chartKey);
       el.addEventListener('click', function (e) {
         var tb = e.target.closest('[data-tray]');
         if (tb) { trayTab = tb.getAttribute('data-tray'); render('#detail [data-tray="' + trayTab + '"]'); return; }
@@ -458,17 +556,22 @@
         // Playing the sound also plays the movement on the diagram.
         if (e.target.closest('#detail [data-play-sound], #detail [data-play-dia], #detail [data-play-pitch]')) S.tractAnimate(el.querySelector('#detail svg.tract'));
         var b = e.target.closest('[data-sym]');
+        if (e.target.closest('[data-close-sheet]')) { setSheet(false); return; }
+        var stp = e.target.closest('[data-step]');
+        if (stp) { navigate(neighbour(+stp.getAttribute('data-step')).s, {}, null); return; }
         if (b && vs) {
           // In compare mode the chart picks B (picking A again swaps them).
           var t = b.getAttribute('data-sym');
           go(t === sel ? compareHash(vs, sel) : compareHash(sel, t));
+          if (isPhone()) setSheet(true);
           return;
         }
         if (b) {
           var s = b.getAttribute('data-sym');
           var kept = DIA.resolve(dia, D.by[s]);
           navigate(s, kept, pro);
-          if (window.matchMedia('(max-width: 899px)').matches) el.querySelector('#detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (isPhone()) { setSheet(true); el.querySelector('#lesson').scrollTop = 0; }
+          else if (window.matchMedia('(max-width: 899px)').matches) el.querySelector('#lesson').scrollIntoView({ behavior: 'smooth', block: 'start' });
           return;
         }
         var d = e.target.closest('[data-dia]');
@@ -516,6 +619,7 @@
       if (reveal) trayTab = reveal;
       else if (pro && !Object.keys(dia).length && !fromMenu) trayTab = 'pro';
       var baseChanged = sel !== lastBase, external = !fromMenu;
+      if (external && (symPart || q.vs || q.open)) sheetOpen = true;
       lastBase = sel;
       fromMenu = false;
 
@@ -528,6 +632,7 @@
         });
       }
       render(focusSel);
+      setSheet(sheetOpen);
 
       // Arriving from elsewhere (a link, search, an old address): bring the relevant part into view.
       if (reveal) { var tr = el.querySelector('#detail .tray'); if (tr) tr.scrollIntoView({ block: 'nearest' }); }

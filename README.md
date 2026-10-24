@@ -31,7 +31,7 @@ Upload the whole folder to any static host. `index.html` is the entry page and a
 - **Netlify**: drag the folder onto https://app.netlify.com/drop.
 - **Cloudflare Pages, Vercel or any web server**: deploy the folder as static files with no build command.
 
-`serve.ps1`, `tests.html`, `audio-sources.md`, `.claude/` and `data/cmudict/cmudict.dict` are not needed by the live site. Keep `data/cmudict/LICENSE`, which the Credits page links to.
+`serve.ps1`, `tests.html`, `tools/`, `audio-sources.md`, `.claude/` and `data/cmudict/cmudict.dict` are not needed by the live site. Keep `data/cmudict/LICENSE`, which the Credits page links to.
 
 ## What it loads from the internet
 
@@ -57,13 +57,10 @@ Prosody playback is synthesized in the browser.
 | `js/palette.js` | Search palette (Ctrl K): symbols, X-SAMPA, English spellings and diacritic phrases |
 | `js/views/transcribe.js`, `js/views/credits.js` | Transcribe tab and Credits page |
 | `src/english-to-ipa.js` | English to IPA function (`SmartIPA.transcribe(text)`) |
-| `data/cmudict.js` | CMU Pronouncing Dictionary as a script (about 3.6 MB, loaded only when Transcribe opens) |
+| `data/cmudict.js` | CMU Pronouncing Dictionary in a compact form (about 1.6 MB, loaded only when Transcribe or the Transcribe drill opens). Rebuild with `node tools/build-cmudict.js` |
+| `sw.js`, `js/offline.js` | Offline support: keeps a copy of the site, and saves recordings only when asked |
 
-To regenerate `data/cmudict.js` after updating `data/cmudict/cmudict.dict`, run in PowerShell from this folder:
-
-```
-$raw = [IO.File]::ReadAllText((Resolve-Path "data\cmudict\cmudict.dict"), [Text.Encoding]::UTF8); [IO.File]::WriteAllText((Join-Path (Get-Location) "data\cmudict.js"), "(typeof window !== 'undefined' ? window : globalThis).SMARTIPA_CMUDICT_RAW = String.raw``" + $raw + "``;`n", (New-Object Text.UTF8Encoding($false)))
-```
+To regenerate `data/cmudict.js` after updating `data/cmudict/cmudict.dict`, run `node tools/build-cmudict.js` from this folder (Node.js is needed only for this step).
 
 ## Licences
 
