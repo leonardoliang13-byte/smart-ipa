@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found · SmartIPA</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600;700&family=Charis+SIL:wght@400&display=swap">
+<style>
+  :root { --bg: #F5F5F7; --card: #FFFFFF; --text: #1D1D1F; --muted: #6E6E73; --line: #E5E5EA; --accent: #0071E3; --ease: cubic-bezier(0.22, 1, 0.36, 1); color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #000000; --card: #181818; --text: #F5F5F7; --muted: #A1A1A6; --line: #313131; --accent: #0A84FF; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg); color: var(--text); font: 16px/24px "Geist", system-ui, sans-serif; }
+  main { max-width: 480px; padding: 40px; border: 1px solid var(--line); border-radius: 24px; background: var(--card); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .glyph { width: 96px; height: 96px; border-radius: 24px; background: var(--bg); display: flex; align-items: center; justify-content: center; font: 60px/1 "Charis SIL", serif; }
+  h1 { margin: 0; font-size: 30px; line-height: 36px; text-wrap: balance; background: linear-gradient(90deg, #000000, #666666); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  @media (prefers-color-scheme: dark) { h1 { background-image: linear-gradient(90deg, #FFFFFF, #9B9B9B); } }
+  p { margin: 0; color: var(--muted); text-wrap: pretty; }
+  a.btn { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: 9999px; background: var(--accent); color: #FFFFFF; font-weight: 600; text-decoration: none; transition: transform 300ms var(--ease), opacity 300ms var(--ease); }
+  a.btn:hover { opacity: 0.9; }
+  a.btn:active { transform: scale(0.98); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="glyph" aria-hidden="true">ʔ</div>
+  <h1>This page does not exist</h1>
+  <p>Like a glottal stop, the address you followed has no sound of its own. The chart is one step away.</p>
+  <a class="btn" href="/smart-ipa/">Open the IPA chart</a>
+</main>
+</body>
+</html>

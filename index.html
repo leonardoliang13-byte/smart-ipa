@@ -8,6 +8,16 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SmartIPA: hear and see every IPA sound">
+<meta property="og:description" content="Every symbol of the International Phonetic Alphabet with a recording, a vocal tract drawing and an example word. Compare sounds, practise, and transcribe English.">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
@@ -30,15 +40,15 @@
 </main>
 
 <nav class="tabbar" aria-label="Sections">
-  <a href="#/sounds" data-nav="sounds"><svg aria-hidden="true" viewBox="0 0 24 24" class="icon"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg>Sounds</a>
-  <a href="#/practice" data-nav="practice"><svg aria-hidden="true" viewBox="0 0 24 24" class="icon"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5 L11 15.5 L16.5 9"></path></svg>Practice</a>
-  <a href="#/transcribe" data-nav="transcribe"><svg aria-hidden="true" viewBox="0 0 24 24" class="icon"><path d="M7 4 L5 20 M19 4 L17 20 M10 9 H15 M9.5 14 H14"></path></svg>Transcribe</a>
-  <button type="button" data-open-palette><svg aria-hidden="true" viewBox="0 0 24 24" class="icon"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M15.5 15.5 L20 20"></path></svg>Search</button>
+  <a href="#/sounds" data-nav="sounds"><i class="ph ph-squares-four icon" aria-hidden="true"></i>Sounds</a>
+  <a href="#/practice" data-nav="practice"><i class="ph ph-check-circle icon" aria-hidden="true"></i>Practice</a>
+  <a href="#/transcribe" data-nav="transcribe"><i class="ph ph-text-aa icon" aria-hidden="true"></i>Transcribe</a>
+  <button type="button" data-open-palette><i class="ph ph-magnifying-glass icon" aria-hidden="true"></i>Search</button>
 </nav>
 
 <footer class="footer">
   <span>Recordings from Wikimedia Commons. English pronunciations from the CMU Pronouncing Dictionary.</span>
-  <span class="footer-links"><a href="#/credits/offline">Use offline</a><a href="#/credits" data-nav="credits">Credits and licences</a></span>
+  <span class="footer-links"><a href="#/credits/offline">Use offline</a><a href="#/credits/privacy">Privacy</a><a href="#/credits" data-nav="credits">Credits and licences</a></span>
 </footer>
 
 <noscript><p class="noscript">SmartIPA needs JavaScript to run.</p></noscript>
@@ -56,6 +66,7 @@
 <script src="js/views/credits.js"></script>
 <script src="js/palette.js"></script>
 <script src="js/offline.js"></script>
+<script src="js/reveal.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

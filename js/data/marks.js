@@ -43,7 +43,7 @@
     'pha|ˤ|Pharyngealized|C|C|The tongue root pulls back toward the throat wall at the same time.|Arabic|صيف ṣayf|sˤajf\n' +
     'vph|̴|Velarized or pharyngealized|C|C|A dark quality from raising the back of the tongue or retracting its root.|English|full|fʊɫ\n' +
     'nas|̃|Nasalized|C|B|The soft palate lowers, so air also flows through the nose.|French|bon|bɔ̃\n' +
-    'rho|˞|Rhotic|C|V|The vowel takes on an r-like colour.|English (American)|bird|bɝd\n' +
+    'rho|˞|Rhotic|C|V|The vowel takes on the colour of an r.|English (American)|bird|bɝd\n' +
     'mor|̹|More rounded|C|V|The lips are rounder than the base symbol implies.|||\n' +
     'les|̜|Less rounded|C|V|The lips are less round than the base symbol implies.|||\n' +
     'nrel|ⁿ|Nasal release|D|C|The stop is released through the nose instead of the mouth.|English|button|ˈbʌtⁿn̩\n' +

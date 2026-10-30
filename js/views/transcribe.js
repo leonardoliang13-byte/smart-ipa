@@ -43,8 +43,8 @@
       if (two === 'tʃ' || two === 'dʒ') { out.push({ t: two, href: 'sounds/' + (two === 'tʃ' ? 't͡ʃ' : 'd͡ʒ'), title: D[two === 'tʃ' ? 't͡ʃ' : 'd͡ʒ'].name }); i++; continue; }
       if (c === 'ˈ') out.push({ t: c, href: 'sounds/?p=ps', title: 'Primary stress' });
       else if (c === 'ˌ') out.push({ t: c, href: 'sounds/?p=ss', title: 'Secondary stress' });
-      else if (c === 'ɚ') out.push({ t: c, href: 'sounds/ə?d=rho', title: 'R-coloured schwa (ə with r-colouring)' });
-      else if (c === 'ɝ') out.push({ t: c, href: 'sounds/ɜ?d=rho', title: 'R-coloured open-mid central vowel (ɜ with r-colouring)' });
+      else if (c === 'ɚ') out.push({ t: c, href: 'sounds/ə?d=rho', title: 'Rhotic schwa (ə with the rhotic hook)' });
+      else if (c === 'ɝ') out.push({ t: c, href: 'sounds/ɜ?d=rho', title: 'Rhotic open mid central vowel (ɜ with the rhotic hook)' });
       else if (c === 'ʰ' && out.length && out[out.length - 1].href && /^sounds\/[ptk]$/.test(out[out.length - 1].href)) {
         var base = out[out.length - 1].href.slice(7);
         out.push({ t: c, href: 'sounds/' + base + '?d=asp', title: 'Aspirated ' + D[base].name.toLowerCase() });
@@ -145,13 +145,13 @@
       el = root;
       el.innerHTML = '<div class="narrow">' +
         '<div class="page-head"><h1>English to IPA</h1><p class="hint" id="tr-style-hint"></p></div>' +
-        '<section class="card"><label for="tr-in" class="label">English text</label>' +
+        '<section class="card" data-reveal="tr-input"><label for="tr-in" class="label">English text</label>' +
         '<textarea id="tr-in" spellcheck="false" rows="3"></textarea>' +
         '<div class="options"><div id="tr-style"></div><label class="check"><input type="checkbox" id="tr-stress"> Stress marks</label>' +
         '<label class="check"><input type="checkbox" id="tr-phonetic"> Aspiration and flaps (pʰ tʰ kʰ, ɾ)</label></div></section>' +
-        '<section class="card"><div class="block-head"><h2>Transcription</h2>' +
+        '<section class="card" data-reveal="tr-output"><div class="block-head"><h2>Transcription</h2>' +
         '<button type="button" class="btn-icon" id="tr-speak" hidden aria-label="Say the text with this device’s voice">' + S.icons.speaker + '</button></div>' +
-        '<div id="tr-out" class="ipa tr-out" aria-live="polite"><span class="empty">Loading the pronunciation dictionary…</span></div>' +
+        '<div id="tr-out" class="ipa tr-out" aria-live="polite"><div class="skeleton" aria-busy="true" aria-label="Loading the pronunciation dictionary"><span class="sk-lg"></span><span class="sk-sm"></span></div></div>' +
         '<div class="copy-row" id="tr-copy-row" hidden><span class="eyebrow">Copy</span>' +
         '<button type="button" class="chip" data-copy="slashes">' + S.icons.copy + '/…/</button>' +
         '<button type="button" class="chip" data-copy="brackets">' + S.icons.copy + '[…]</button>' +
@@ -159,7 +159,7 @@
         '<button type="button" class="chip" data-copy="table">' + S.icons.copy + 'Word list</button>' +
         '<span class="hint" id="tr-copy-msg" role="status"></span></div>' +
         '<p class="hint">Select any symbol to see and hear it.</p></section>' +
-        '<section class="card"><h2>Word by word</h2><p class="hint">Where a word has more than one pronunciation, select the one you want; the transcription above follows it.</p>' +
+        '<section class="card" data-reveal="tr-words"><h2>Word by word</h2><p class="hint">Where a word has more than one pronunciation, select the one you want; the transcription above follows it.</p>' +
         '<div class="scroll-x"><table class="table"><thead><tr><th>Word</th><th>IPA</th><th>Source</th></tr></thead>' +
         '<tbody id="tr-words"></tbody></table></div>' +
         '<p class="hint">dictionary: CMU Pronouncing Dictionary · derived: dictionary word plus a regular ending · spelled: read letter by letter · ' +

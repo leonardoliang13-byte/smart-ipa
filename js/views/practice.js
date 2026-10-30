@@ -173,7 +173,7 @@
   }
 
   function transcribeHTML() {
-    if (!window.SMARTIPA_CMUDICT_RAW) return '<p class="empty">Loading the pronunciation dictionary…</p>';
+    if (!window.SMARTIPA_CMUDICT_RAW) return '<div class="skeleton" aria-busy="true" aria-label="Loading the pronunciation dictionary"><span class="sk-lg"></span><span class="sk-md"></span><span class="sk-sm"></span></div>';
     var keys = '<div class="pr-keys" aria-label="IPA keyboard">' + keyList().map(function (k) {
       return '<button type="button" class="pr-k ipa" data-key="' + esc(k) + '">' + esc(k) + '</button>';
     }).join('') + '<button type="button" class="pr-k pr-k-wide" data-key="⌫" aria-label="Delete last character">⌫</button></div>';
@@ -205,7 +205,7 @@
       (mode === 'transcribe' ? '' : '<div class="pr-scopes" role="group" aria-label="Which sounds">' + SCOPES.map(function (s) {
         return '<button type="button" class="chip' + (s[0] === scope ? ' is-on' : '') + '" data-scope="' + s[0] + '" aria-pressed="' + (s[0] === scope) + '">' + esc(s[1]) + '</button>';
       }).join('') + '</div>') +
-      '<section class="card pr-card">' + body + '</section></div>';
+      '<section class="card pr-card" data-reveal="practice-card">' + body + '</section></div>';
     var inp = el.querySelector('#pr-input');
     if (inp && !answered) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
   }

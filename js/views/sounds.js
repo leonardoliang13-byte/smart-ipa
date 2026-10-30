@@ -58,8 +58,8 @@
   }
 
   function consonantChart() {
-    var h = '<section class="card"><div class="card-head"><h2 class="sec-title">' + secIcon('cons', 'p') + 'Pulmonic consonants</h2>' +
-      '<p class="hint">In each pair the right-hand symbol is voiced. Shaded cells are judged impossible.</p></div>' +
+    var h = '<section class="card" data-reveal="chart-pulmonic"><div class="card-head"><h2 class="sec-title">' + secIcon('cons', 'p') + 'Pulmonic consonants</h2>' +
+      '<p class="hint">In each pair the symbol on the right is voiced. Shaded cells are judged impossible.</p></div>' +
       '<div class="scroll-x"><div class="pulmonic"><div class="pul-head"><div></div>' +
       D.places.map(function (p) { return '<div>' + esc(p) + '</div>'; }).join('') + '</div>';
     D.rows.forEach(function (r) {
@@ -83,9 +83,9 @@
     // Second row: the vowel chart on the left, filling the row's height; non-pulmonic consonants and
     // other symbols stacked on the right, so no box is left with empty space.
     h += '<div class="three-up">' + vowelChart() + '<div class="side-col">' +
-      '<section class="card np-card"><h2 class="sec-title">' + secIcon('cons', 'ʘ') + 'Non-pulmonic consonants</h2><div class="np">' +
+      '<section class="card np-card" data-reveal="chart-np"><h2 class="sec-title">' + secIcon('cons', 'ʘ') + 'Non-pulmonic consonants</h2><div class="np">' +
       listGroup('Clicks', D.clicks) + listGroup('Voiced implosives', D.implosives) + listGroup('Ejectives', D.ejectives) +
-      '</div></section><section class="card other-card"><h2 class="sec-title">' + secIcon('cons', 'w') + 'Other symbols</h2><div class="tiles">' +
+      '</div></section><section class="card other-card" data-reveal="chart-other"><h2 class="sec-title">' + secIcon('cons', 'w') + 'Other symbols</h2><div class="tiles">' +
       D.others.map(function (s) { return symBtn(s, 'tile-btn'); }).join('') +
       '</div><h3 class="sub-h">Affricates and double articulations</h3><p class="hint">Two symbols joined by a tie bar.</p><div class="tiles">' +
       D.affricates.map(function (s) { return symBtn(s, 'tile-btn wide'); }).join('') + '</div></section></div></div>';
@@ -93,7 +93,7 @@
   }
 
   function vowelChart() {
-    return '<section class="card vowel-card"><div class="card-head"><h2 class="sec-title">' + secIcon('vow', 'a') + 'Vowels</h2><p class="hint">Right-hand symbol of each pair is rounded.</p>' +
+    return '<section class="card vowel-card" data-reveal="chart-vowels"><div class="card-head"><h2 class="sec-title">' + secIcon('vow', 'a') + 'Vowels</h2><p class="hint">In each pair the symbol on the right is rounded.</p>' +
       '</div><div class="scroll-x"><div class="vowel-chart">' +
       '<div class="v-heights"><span style="top:0">Close</span><span style="top:33.3%">Close-mid</span><span style="top:66.7%">Open-mid</span><span style="top:100%">Open</span></div>' +
       '<div class="v-main"><div class="v-backs"><span style="left:0">Front</span><span style="left:50%">Central</span><span style="left:100%">Back</span></div>' +
